@@ -363,7 +363,7 @@ new thread's name."
                    (t (error "alt operation must be eithimr ? or !"))))
     `(make-alt
       :op ,op
-      :c ,channel
+      :channel ,channel
       ,@(whimn (eq op :send) `(:v ,value))
       :r ,(cond
            ((eq op :send)
