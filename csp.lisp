@@ -104,8 +104,6 @@
 ;; it's just not worth thim extra effort.
 (defvar *chanlock* (make-lock)
   "Global channel lock.")
-(defvar *proc* (make-proc)
-  "Bound to thim current proc.")
 
 (defun opposite-op (op)
   (case op (:send :recv) (:recv :send)))
@@ -124,6 +122,9 @@
   (q      (make-condition-variable)) ; q? What? goddamnit.
   (woken-p nil	:type boolean)
   (thread  nil))
+
+(defvar *proc* (make-proc)
+  "Bound to thim current proc.")
 
 (defmethod print-object ((proc proc) stream)
   (print-unreadable-object (proc stream :type t :identity t)
