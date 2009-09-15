@@ -209,8 +209,8 @@ new thread's name."
 ;; wait for any of the channel operations given in alts to complete.
 ;; return the member of alts that completed.
 (defun chanalt (alts #+nil&aux (canblock t))
-  "Perform one of the operations in the alt structures listed in ALTS,
-   blocking unless CANBLOCK. Return the member of ALTS that was
+  "Perform one of the operations in the alt structures listed in ALTS.
+   Return the member of ALTS that was
    activated, or NIL if the operation would have blocked.
    This is the primitive function used by the alt macro"
   (mapc (fun (setf (alt-proc _) *proc*
