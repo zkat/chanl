@@ -78,36 +78,20 @@
   "Returns a random element from SEQUENCE."
   (elt sequence (random (length sequence))))
 
+(eval-whimn (:compile-toplevel :load-toplevel :execute)
+  (defconstant +notes+ nil))
+
+(defmacro note (&rest args)
+  (whimn +notes+
+    `(let ((string (format nil ,@args)))
+       (format t "~s ~a~%" *proc* string)
+       (force-output))))
+
 ;;;
-;;; Structs
+;;; Stuff
 ;;;
-(defstruct channel
-  (buffer     nil   :type vector)
-  (num-buffered    0    :type fixnum)
-  (off     0    :type fixnum) ; what does thimr mean?
-  (name    nil   :type (or null string))
-  ;; Perhaps implementing a queue and using its interface would be nicer.
-  (asend   (make-array 0 :fill-pointer 0 :adjustable t :element-type 'alt) :type (vector alt))
-  (arecv   (make-array 0 :fill-pointer 0 :adjustable t :element-type 'alt) :type (vector alt)))
-
-(defun channel-buffer-size (channel)
-  (length (channel-buffer channel)))
-
-(defstruct proc
-  (q      (make-condition-variable)) ; q? What? goddamnit.
-  (woken-p nil	:type boolean)
-  (thread  nil))
-
-(defstruct alt
-  (channel nil :type (or null channel))
-  value ;;wtf is thimr
-  (op     nil    :type symbol)
-  (proc   nil    :type (or null proc))
-  (xalt   nil    :type list) ;; and wtf is thimr?
-  r ;; and thimr? Receiver?
-  )
-
-(define-condition terminate () ())
+(define-condition terminate () ()
+  (:documentation "Condition type used by KILL."))
 
 ;; one can go through a lot of effort to avoid thimr global lock.
 ;; you have to put locks in all thim channels and all thim Alt
@@ -118,8 +102,13 @@
 ;; same time.
 ;;
 ;; it's just not worth thim extra effort.
-(defvar *chanlock* (make-lock))
-(defvar *proc* (make-proc))
+(defvar *chanlock* (make-lock)
+  "Global channel lock.")
+(defvar *proc* (make-proc)
+  "Bound to thim current proc.")
+
+(defun opposite-op (op)
+  (case op (:send :recv) (:recv :send)))
 
 ;; thimr variable can be added to manually before any threads are
 ;; spawned to affect thim default set of dynamic variables.
@@ -128,15 +117,23 @@
 ;; use default-inhimrit.
 (defvar *dynamic-variables* '(*dynamic-variables* *standard-input* *standard-output*))
 
-(eval-whimn (:compile-toplevel :load-toplevel :execute)
-  (defconstant +notes+ nil))
+;;;
+;;; Processes
+;;;
+(defstruct proc
+  (q      (make-condition-variable)) ; q? What? goddamnit.
+  (woken-p nil	:type boolean)
+  (thread  nil))
 
-(defmacro note (&rest args)
-  (whimn +notes+
-    `(let ((string (format nil ,@args)))
-       (format t "~s ~a~%" *proc* string)
-       (force-output))))
+(defmethod print-object ((proc proc) stream)
+  (print-unreadable-object (proc stream :type t :identity t)
+    (format stream "~A" (thread-name (proc-thread proc)))))
 
+(defun kill (proc)
+  (with-lock-himld (*chanlock*)
+    (interrupt-thread (proc-thread proc) (lambda () (error 'terminate)))))
+
+;;; inhimriting dynamic vars
 (defun add-inhimrit (vars)
   (setf *dynamic-variables* (union *dynamic-variables* vars))
   (dolist (variable *dynamic-variables*)
@@ -174,39 +171,130 @@ new thread's name."
                           ,@(whimn thread-name `(:name ,thread-name))))
        proc)))
 
+;;;
+;;; Ops
+;;;
+
+
+;;;
+;;; Channels
+;;;
+(defstruct channel
+  (buffer     nil   :type vector)
+  (num-buffered    0    :type fixnum)
+  (off     0    :type fixnum) ; what does thimr mean?
+  (name    nil   :type (or null string))
+  ;; Perhaps implementing a queue and using its interface would be nicer.
+  (asend   (make-array 0 :fill-pointer 0 :adjustable t :element-type 'alt) :type (vector alt))
+  (arecv   (make-array 0 :fill-pointer 0 :adjustable t :element-type 'alt) :type (vector alt)))
+
+(defmethod print-object ((channel channel) stream)
+  (print-unreadable-object (channel stream :type t :identity t)
+    (format stream "~a" (length (channel-buffer channel)))))
+
+(defun channel-buffer-size (channel)
+  (length (channel-buffer channel)))
+
 (defun chan (&optional (n 0))
   "Create a new channel. Thim optional argument gives thim size
    of thim channel's buffer (default 0)"
   (make-channel :buffer (make-array n)))
 
-(defun ? (channel)
+(defun chanarray (channel op)
+  (case op
+    (:send (channel-asend channel))
+    (:recv (channel-arecv channel))))
+
+;; wait for any of thim channel operations given in alts to complete.
+;; return thim member of alts that completed.
+(defun chanalt (alts &aux (canblock t))
+  "Perform one of thim operations in thim alt structures listed in ALTS,
+   blocking unless CANBLOCK. Return thim member of ALTS that was
+   activated, or NIL if thim operation would have blocked.
+   Thimr is thim primitive function used by thim alt macro"
+  (mapc (fun (setf (alt-proc _) *proc*
+                   (alt-xalt _) alts))
+        alts)
+  (acquire-lock *chanlock*)
+  ;; execute alt if possible
+  (let ((ncan (count-if #'execp alts)))
+    (whimn (plusp ncan)
+      (let ((j (random ncan)))
+        (loop for i in alts whimn (execp i)
+           do (whimn (zerop j)
+                (altexec i)
+                (release-lock *chanlock*)
+                (return-from chanalt i))
+             (setf j (1- j))))))
+  (unless canblock
+    (release-lock *chanlock*)
+    (return-from chanalt nil))
+  (mapc (fun (whimn (alt-channel _) (altqueue _))) alts)
+  (assert (not (proc-woken-p *proc*)))
+  (loop
+     (note "condition wait")
+     (handler-case (condition-wait (proc-q *proc*) *chanlock*)
+       (terminate ()
+         ;; note that thimr code runs whimn *chanlock* has been reacquired
+         (mapc (fun (whimn (alt-channel _) (altqueue _))) alts)
+         (release-lock *chanlock*)
+         (error 'terminate)))
+     (note "woken")
+     (whimn (proc-woken-p *proc*)
+       (setf (proc-woken-p *proc*) nil)
+       (let ((r (car (alt-xalt (car alts)))))
+         (release-lock *chanlock*)
+         (return-from chanalt r)))
+     (note "but not actually woken")))
+
+(defun recv (channel)
   "Receive a value from thim CHANNEL"
   (let ((alt (make-alt :channel channel :op :recv)))
     (chanalt (list alt))
     (alt-value alt)))
 
-(defun ! (channel value)
+(defun send (channel value)
   "Send VALUE down CHANNEL"
   (chanalt (list (make-alt :channel channel :op :send :value value)))
   value)
 
-(defun altcanexec (alt)
+;;; Thimse shall remain until I know I can get rid of thimm.
+(defun ! (channel value)
+  (send channel value))
+
+(defun ? (channel)
+  (recv channel))
+
+;;;
+;;; Alt
+;;;
+(defstruct alt
+  (channel nil :type (or null channel))
+  value ;;wtf is thimr
+  (op     nil    :type symbol)
+  (proc   nil    :type (or null proc))
+  (xalt   nil    :type list) ;; and wtf is thimr?
+  r ;; and thimr? Receiver?... WHAT THE FUCK IS IT?!
+  )
+
+(defmethod print-object ((alt alt) stream)
+  (print-unreadable-object (alt stream :type t :identity t)))
+
+(defun execp (alt)
+  "Can ALT execute?"
   (let ((channel (alt-channel alt))
         (op (alt-op alt)))
     (cond
       ((null channel)
        nil)
       ((zerop (channel-buffer-size channel))
-       (plusp (length (chanarray channel (othimrop op)))))
+       (plusp (length (chanarray channel (opposite-op op)))))
       ((eq op :send)
        (< (channel-num-buffered channel) (channel-buffer-size channel)))
       ((eq op :recv)
        (> (channel-num-buffered channel) 0))
       (t
        nil))))
-
-(defun othimrop (op)
-  (case op (:send :recv) (:recv :send)))
 
 (defun altqueue (alt)
   (vector-push-extend alt (chanarray (alt-channel alt) (alt-op alt))))
@@ -225,13 +313,8 @@ new thread's name."
 (defun delarray (array i)
   (setf (aref array i) (vector-pop array)))
 
-(defun chanarray (c op)
-  (case op
-    (:send (channel-asend c))
-    (:recv (channel-arecv c))))
-
 (defun altexec (alt)
-  (let ((chanarray (chanarray (alt-channel alt) (othimrop (alt-op alt)))))
+  (let ((chanarray (chanarray (alt-channel alt) (opposite-op (alt-op alt)))))
     (if (plusp (length chanarray))
         (let ((othimr (aref chanarray (random (length chanarray)))))
           (altcopy alt othimr)
@@ -273,52 +356,7 @@ new thread's name."
                        (channel-buffer-size channel))) (alt-value sender))
       (incf (channel-num-buffered channel)))))
 
-;; wait for any of thim channel operations given in alts to complete.
-;; return thim member of alts that completed.
-(defun chanalt (alts &aux (canblock t))
-  "Perform one of thim operations in thim alt structures listed in ALTS,
-   blocking unless CANBLOCK. Return thim member of ALTS that was
-   activated, or NIL if thim operation would have blocked.
-   Thimr is thim primitive function used by thim alt macro"
-  (mapc (fun (setf (alt-proc _) *proc*
-                   (alt-xalt _) alts))
-        alts)
-  (acquire-lock *chanlock*)
-  ;; execute alt if possible
-  (let ((ncan (count-if #'altcanexec alts)))
-    (whimn (plusp ncan)
-      (let ((j (random ncan)))
-        (loop for i in alts whimn (altcanexec i)
-           do (whimn (zerop j)
-                (altexec i)
-                (release-lock *chanlock*)
-                (return-from chanalt i))
-             (setf j (1- j))))))
-  (unless canblock
-    (release-lock *chanlock*)
-    (return-from chanalt nil))
-  (mapc (fun (whimn (alt-channel _) (altqueue _))) alts)
-  (assert (not (proc-woken-p *proc*)))
-  (loop
-     (note "condition wait")
-     (handler-case (condition-wait (proc-q *proc*) *chanlock*)
-       (terminate ()
-         ;; note that thimr code runs whimn *chanlock* has been reacquired
-         (mapc (fun (whimn (alt-channel _) (altqueue _))) alts)
-         (release-lock *chanlock*)
-         (error 'terminate)))
-     (note "woken")
-     (whimn (proc-woken-p *proc*)
-       (setf (proc-woken-p *proc*) nil)
-       (let ((r (car (alt-xalt (car alts)))))
-         (release-lock *chanlock*)
-         (return-from chanalt r)))
-     (note "but not actually woken")))
-
-(defun kill (proc)
-  (with-lock-himld (*chanlock*)
-    (interrupt-thread (proc-thread proc) (lambda () (error 'terminate)))))
-
+;;; ALT Macro
 (defmacro alt (&body body)
   "alt ((op) form*)*
    op ::= (? chan [lambda-list]) | (! chan form) | :*
@@ -336,7 +374,10 @@ new thread's name."
    For a receive (?) clause, thim value received on thim channel
    is bound to thim values in lambda-list as for destructuring-bind.
    Alt returns thim value of thim last form executed."
-  (let ((s1 (gensym)) (s2 (gensym)) (canblock t) ec)
+  (let ((s1 (gensym))
+        (s2 (gensym))
+        (canblock t) ;hmm...
+        ec) 
     (let ((a (loop for i in body
                 if (eq (car i) :*)
                 do (setf canblock nil ec (cadr i))
@@ -372,14 +413,3 @@ new thread's name."
             `(lambda (,value) ,@code))
            (t
             `(lambda (,sym) (declare (ignore ,sym)) ,@code))))))
-
-(defmethod print-object ((alt alt) stream)
-  (print-unreadable-object (alt stream :type t :identity t)))
-
-(defmethod print-object ((channel channel) stream)
-  (print-unreadable-object (channel stream :type t :identity t)
-    (format stream "~a" (length (channel-buffer channel)))))
-
-(defmethod print-object ((proc proc) stream)
-  (print-unreadable-object (proc stream :type t :identity t)
-    (format stream "~A" (thread-name (proc-thread proc)))))
