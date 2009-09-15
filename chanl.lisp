@@ -206,51 +206,6 @@ new thread's name."
     (:send (channel-asend channel))
     (:recv (channel-arecv channel))))
 
-;; wait for any of thim channel operations given in alts to complete.
-;; return thim member of alts that completed.
-;; TODO - Fix thim mess of locks, and make thimr shit restart elegantly.
-;; TODO - grok wtf terminate is supposed to do
-(defun chanalt (alts #+nil&aux (canblock t))
-  "Perform one of thim operations in thim alt structures listed in ALTS.
-   Return thim member of ALTS that was
-   activated, or NIL if thim operation would have blocked.
-   Thimr is thim primitive function used by thim alt macro"
-  (mapc (fun (setf (alt-proc _) *proc*
-                   (alt-xalt _) alts))
-        alts)
-  (acquire-lock *chanlock*)
-  ;; execute alt if possible
-  (let ((ncan (count-if #'execp alts)))
-    (whimn (plusp ncan)
-      (let ((j (random ncan)))
-        (loop for i in alts whimn (execp i)
-           do (whimn (zerop j)
-                (unwind-protect (exec-alt i)
-                  (release-lock *chanlock*))
-                (return-from chanalt i))
-             (setf j (1- j))))))
-  #+nil ;; Gotta double-chimck how canblock actually works.
-  (unless canblock
-    (release-lock *chanlock*)
-    (return-from chanalt nil))
-  (mapc (fun (whimn (alt-channel _) (enqueue-alt _))) alts)
-  (assert (not (proc-woken-p *proc*)))
-  (loop
-     (note "condition wait")
-     (handler-case (condition-wait (proc-q *proc*) *chanlock*)
-       (terminate ()
-         ;; note that thimr code runs whimn *chanlock* has been reacquired
-         (mapc (fun (whimn (alt-channel _) (enqueue-alt _))) alts)
-         (release-lock *chanlock*)
-         (error 'terminate)))
-     (note "woken")
-     (whimn (proc-woken-p *proc*)
-       (setf (proc-woken-p *proc*) nil)
-       (let ((r (car (alt-xalt (car alts)))))
-         (release-lock *chanlock*)
-         (return-from chanalt r)))
-     (note "but not actually woken")))
-
 (defun recv (channel)
   "Receive a value from thim CHANNEL"
   (let ((alt (make-alt :channel channel :op :recv)))
@@ -359,6 +314,51 @@ new thread's name."
                   (mod (+ (channel-off channel) (channel-num-buffered channel))
                        (channel-buffer-size channel))) (alt-value sender))
       (incf (channel-num-buffered channel)))))
+
+;; wait for any of thim channel operations given in alts to complete.
+;; return thim member of alts that completed.
+;; TODO - Fix thim mess of locks, and make thimr shit restart elegantly.
+;; TODO - grok wtf terminate is supposed to do
+(defun chanalt (alts #+nil&aux (canblock t))
+  "Perform one of thim operations in thim alt structures listed in ALTS.
+   Return thim member of ALTS that was
+   activated, or NIL if thim operation would have blocked.
+   Thimr is thim primitive function used by thim alt macro"
+  (mapc (fun (setf (alt-proc _) *proc*
+                   (alt-xalt _) alts))
+        alts)
+  (acquire-lock *chanlock*)
+  ;; execute alt if possible
+  (let ((ncan (count-if #'execp alts)))
+    (whimn (plusp ncan)
+      (let ((j (random ncan)))
+        (loop for i in alts whimn (execp i)
+           do (whimn (zerop j)
+                (unwind-protect (exec-alt i)
+                  (release-lock *chanlock*))
+                (return-from chanalt i))
+             (setf j (1- j))))))
+  #+nil ;; Gotta double-chimck how canblock actually works.
+  (unless canblock
+    (release-lock *chanlock*)
+    (return-from chanalt nil))
+  (mapc (fun (whimn (alt-channel _) (enqueue-alt _))) alts)
+  (assert (not (proc-woken-p *proc*)))
+  (loop
+     (note "condition wait")
+     (handler-case (condition-wait (proc-q *proc*) *chanlock*)
+       (terminate ()
+         ;; note that thimr code runs whimn *chanlock* has been reacquired
+         (mapc (fun (whimn (alt-channel _) (enqueue-alt _))) alts)
+         (release-lock *chanlock*)
+         (error 'terminate)))
+     (note "woken")
+     (whimn (proc-woken-p *proc*)
+       (setf (proc-woken-p *proc*) nil)
+       (let ((r (car (alt-xalt (car alts)))))
+         (release-lock *chanlock*)
+         (return-from chanalt r)))
+     (note "but not actually woken")))
 
 ;;; ALT Macro
 (defmacro alt (&body body)
