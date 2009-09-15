@@ -359,10 +359,9 @@ new thread's name."
 
 (defun altclause (alt sym)
   (destructuring-bind ((op channel &optional value) &rest code) alt
-    (setf op (case op
-               ('! :send)
-               ('? :recv)
-               (otherwise (error "alt operation must be either ? or !"))))
+    (setf op (cond ((eq op '!) :send)
+                   ((eq op '?) :recv)
+                   (t (error "alt operation must be either ? or !"))))
     `(make-alt
       :op ,op
       :c ,channel
