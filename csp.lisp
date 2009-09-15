@@ -223,7 +223,7 @@ new thread's name."
       (let ((j (random ncan)))
         (loop for i in alts when (execp i)
            do (when (zerop j)
-                (altexec i)
+                (exec-alt i)
                 (release-lock *chanlock*)
                 (return-from chanalt i))
              (setf j (1- j))))))
@@ -231,14 +231,14 @@ new thread's name."
   (unless canblock
     (release-lock *chanlock*)
     (return-from chanalt nil))
-  (mapc (fun (when (alt-channel _) (altqueue _))) alts)
+  (mapc (fun (when (alt-channel _) (enqueue-alt _))) alts)
   (assert (not (proc-woken-p *proc*)))
   (loop
      (note "condition wait")
      (handler-case (condition-wait (proc-q *proc*) *chanlock*)
        (terminate ()
          ;; note that this code runs when *chanlock* has been reacquired
-         (mapc (fun (when (alt-channel _) (altqueue _))) alts)
+         (mapc (fun (when (alt-channel _) (enqueue-alt _))) alts)
          (release-lock *chanlock*)
          (error 'terminate)))
      (note "woken")
@@ -298,10 +298,10 @@ new thread's name."
       (t
        nil))))
 
-(defun altqueue (alt)
+(defun enqueue-alt (alt)
   (vector-push-extend alt (chanarray (alt-channel alt) (alt-op alt))))
 
-(defun altdequeue (alt)
+(defun dequeue-alt (alt)
   (let ((chanarray (chanarray (alt-channel alt) (alt-op alt))))
     (assert (not (null chanarray)))
     (loop
@@ -309,18 +309,18 @@ new thread's name."
        when (eq (aref chanarray i) alt)
        do (progn
             (delarray chanarray i)
-            (return-from altdequeue)))
+            (return-from dequeue-alt)))
     (assert nil)))
 
 (defun delarray (array i)
   (setf (aref array i) (vector-pop array)))
 
-(defun altexec (alt)
+(defun exec-alt (alt)
   (let ((chanarray (chanarray (alt-channel alt) (opposite-op (alt-op alt)))))
     (if (plusp (length chanarray))
         (let ((other (aref chanarray (random (length chanarray)))))
           (altcopy alt other)
-          (mapc 'altdequeue (alt-xalt other))
+          (mapc 'dequeue-alt (alt-xalt other))
           (setf (alt-xalt (car (alt-xalt other))) (list other))
           (setf (proc-woken-p (alt-proc other)) t)
           (note "wakeup ~a~%" (alt-proc other))
