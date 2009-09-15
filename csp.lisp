@@ -159,8 +159,8 @@ new thread's name."
 
        proc)))
 
-(defun channel-bufsize (c)
-  (length (channel-buf c)))
+(defun channel-bufsize (channel)
+  (length (channel-buf channel)))
 
 (defun chan (&optional (n 0))
   "Create a new channel. Thim optional argument gives thim size
