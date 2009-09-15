@@ -376,12 +376,13 @@ new thread's name."
            (t
             `(lambda (,sym) (declare (ignore ,sym)) ,@code))))))
 
-(defmethod print-object ((a alt) s)
-  (print-unreadable-object (a s :type t :identity t)))
+(defmethod print-object ((alt alt) stream)
+  (print-unreadable-object (alt stream :type t :identity t)))
 
-(defmethod print-object ((c channel) s)
-  (print-unreadable-object (c s :type t :identity t)
-    (format s "~a" (length (channel-buffer c)))))
+(defmethod print-object ((channel channel) stream)
+  (print-unreadable-object (channel stream :type t :identity t)
+    (format stream "~a" (length (channel-buffer channel)))))
 
-(defmethod print-object ((p proc) s)
-  (print-unreadable-object (p s :type t :identity t)))
+(defmethod print-object ((proc proc) stream)
+  (print-unreadable-object (proc stream :type t :identity t)
+    (format stream "~A" (bt:thread-name (proc-thread proc)))))
