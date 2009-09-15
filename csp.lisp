@@ -274,17 +274,16 @@ new thread's name."
                        (channel-buffer-size channel))) (alt-v sender))
       (incf (channel-number-buffered channel)))))
 
-;; wait for any of the channel operations given in a to complete.
-;; return the member of a that completed.
+;; wait for any of the channel operations given in alts to complete.
+;; return the member of alts that completed.
 (defun chanalt (canblock alts)
   "Perform one of the operations in the alt structures listed in ALTS,
-   blocking unless canblock. Return the member of a that was
-   activated, or nil if the operation would have blocked.
+   blocking unless CANBLOCK. Return the member of ALTS that was
+   activated, or NIL if the operation would have blocked.
    This is the primitive function used by the alt macro"
-  (loop for alt in alts do
-       (progn
-         (setf (alt-proc alt) *proc*)
-         (setf (alt-xalt alt) alts)))
+  (mapc (fun (setf (alt-proc alt) *proc*
+                   (alt-xalt alt) alts))
+        alts)
   (acquire-lock *chanlock*)
   ;; execute alt if possible
   (let ((ncan (count-if #'altcanexec alts)))
@@ -300,14 +299,14 @@ new thread's name."
   (unless canblock
     (release-lock *chanlock*)
     (return-from chanalt nil))
-  (loop for i in alts when (alt-c i) do (altqueue i))
+  (mapc (fun (when (alt-c _) (altqueue _))) alts)
   (assert (not (proc-woken-p *proc*)))
   (loop
      (note "condition wait")
      (handler-case (condition-wait (proc-q *proc*) *chanlock*)
        (terminate ()
          ;; note that this code runs when *chanlock* has been reacquired
-         (loop for i in a when (alt-c i) do (altdequeue i))
+         (mapc (fun (when (alt-c _) (altqueue _))) alts)
          (release-lock *chanlock*)
          (error 'terminate)))
      (note "woken")
