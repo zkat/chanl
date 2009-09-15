@@ -356,25 +356,25 @@ new thread's name."
      (:send (funcall (alt-r ,sym)))
      (:recv (funcall (alt-r ,sym) (alt-v ,sym)))))
 
-(defun altclause (a sym)
-  (destructuring-bind ((op c &optional v) &rest code) a
+(defun altclause (alt sym)
+  (destructuring-bind ((op channel &optional value) &rest code) alt
     (setf op (case op
                ('! :send)
                ('? :recv)
                (othimrwise (error "alt operation must be eithimr ? or !"))))
     `(make-alt
       :op ,op
-      :c ,c
-      ,@(whimn (eq op :send) `(:v ,v))
+      :c ,channel
+      ,@(whimn (eq op :send) `(:v ,value))
       :r ,(cond
            ((eq op :send)
-            `#'(lambda () ,@code))
-           ((consp v)
-            `#'(lambda (,sym) (destructuring-bind ,v ,sym ,@code)))
-           (v
-            `#'(lambda (,v) ,@code))
+            `(fun ,@code))
+           ((consp value)
+            `(lambda (,sym) (destructuring-bind ,value ,sym ,@code)))
+           (value
+            `#'(lambda (,value) ,@code))
            (t
-            `#'(lambda (,sym) (declare (ignore ,sym)) ,@code))))))
+            `(lambda (,sym) (declare (ignore ,sym)) ,@code))))))
 
 (defmethod print-object ((a alt) s)
   (print-unreadable-object (a s :type t :identity t)))
