@@ -97,7 +97,7 @@
 
 (defstruct alt
   (channel nil :type (or null channel))
-  v ;;wtf is this
+  value ;;wtf is this
   (op     nil    :type symbol)
   (proc   nil    :type (or null proc))
   (xalt   nil    :type list) ;; and wtf is this?
@@ -183,7 +183,7 @@ new thread's name."
   "Receive a value from the CHANNEL"
   (let ((alt (make-alt :channel channel :op :recv)))
     (chanalt t (list alt))
-    (alt-v alt)))
+    (alt-value alt)))
 
 (defun ! (channel value)
   "Send VALUE down CHANNEL"
@@ -258,18 +258,18 @@ new thread's name."
     (assert (or (null receiver) (eq (alt-op receiver) :recv)))
     ;; channel is empty (or unbuffered) - copy directly.
     (when (and (not (null sender)) (not (null receiver)) (zerop (channel-num-buffered channel)))
-      (setf (alt-v receiver) (alt-v sender))
+      (setf (alt-value receiver) (alt-value sender))
       (return-from altcopy))
     ;; otherwise it's always okay to receive and then send.
     (when (not (null receiver))
-      (setf (alt-v receiver) (aref (channel-buffer channel) (channel-off channel)))
+      (setf (alt-value receiver) (aref (channel-buffer channel) (channel-off channel)))
       (decf (channel-num-buffered channel))
       (when (eql (incf (channel-off channel)) (channel-buffer-size channel))
         (setf (channel-off channel) 0)))
     (when sender
       (setf (aref (channel-buffer channel)
                   (mod (+ (channel-off channel) (channel-num-buffered channel))
-                       (channel-buffer-size channel))) (alt-v sender))
+                       (channel-buffer-size channel))) (alt-value sender))
       (incf (channel-num-buffered channel)))))
 
 ;; wait for any of the channel operations given in alts to complete.
@@ -352,7 +352,7 @@ new thread's name."
 (defun altinvoke (sym)
   `(case (alt-op ,sym)
      (:send (funcall (alt-r ,sym)))
-     (:recv (funcall (alt-r ,sym) (alt-v ,sym)))))
+     (:recv (funcall (alt-r ,sym) (alt-value ,sym)))))
 
 (defun altclause (alt sym)
   (destructuring-bind ((op channel &optional value) &rest code) alt
