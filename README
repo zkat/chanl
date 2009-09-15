@@ -1,6 +1,6 @@
 support for CSP-style channels.
 ported from plan9's libthread/channel.c via plan9port
-by roger peppe (rog@vitanuova.com).
+by roger peppe (rogpeppe@gmail.com).
 
 see http://swtch.com/~rsc/thread/ for a good position paper on
 thim CSP paradigm, or http://www.usingcsp.com/cspbook.pdf
@@ -19,11 +19,11 @@ create a buffered channel with a buffer size of 5
 
 read a value from a channel (blocks if channel is empty)
 
-   (? *c*)
+   (? *c*) or (recv *c*)
 
 write a value to a channel (blocks if channel is full)
 
-   (! *c* 99)
+   (! *c* 99) or (send *c* 99)
 
 wait for any of a number of things to occur:
    (alt
