@@ -180,30 +180,30 @@ new thread's name."
 (defun chan (&optional (n 0))
   "Create a new channel. The optional argument gives the size
    of the channel's buffer (default 0)"
-  (make-channel :buf (make-array n)))
+  (make-channel :buffer (make-array n)))
 
 (defun ? (channel)
   "Receive a value from the CHANNEL"
-  (let ((alt (make-alt :c channel :op :recv)))
+  (let ((alt (make-alt :channel channel :op :recv)))
     (chanalt t (list alt))
     (alt-v alt)))
 
 (defun ! (channel value)
   "Send VALUE down CHANNEL"
-  (chanalt t (list (make-alt :c channel :op :send :v value)))
+  (chanalt t (list (make-alt :channel channel :op :send :v value)))
   value)
 
 (defun altcanexec (alt)
-  (let ((channel (alt-c alt)) (op (alt-op alt)))
+  (let ((channel (alt-channel alt)) (op (alt-op alt)))
     (cond
       ((null channel)
        nil)
       ((zerop (channel-buffer-size channel))
-       (plusp (length (chanarray c (otherop op)))))
+       (plusp (length (chanarray channel (otherop op)))))
       ((eq op :send)
-       (< (channel-number-buffered c) (channel-buffer-size c)))
+       (< (channel-num-buffered channel) (channel-buffer-size channel)))
       ((eq op :recv)
-       (> (channel-number-buffered c) 0))
+       (> (channel-num-buffered channel) 0))
       (t
        nil))))
 
@@ -211,10 +211,10 @@ new thread's name."
   (case op (:send :recv) (:recv :send)))
 
 (defun altqueue (alt)
-  (vector-push-extend alt (chanarray (alt-c alt) (alt-op alt))))
+  (vector-push-extend alt (chanarray (alt-channel alt) (alt-op alt))))
 
 (defun altdequeue (alt)
-  (let ((chanarray (chanarray (alt-c alt) (alt-op alt))))
+  (let ((chanarray (chanarray (alt-channel alt) (alt-op alt))))
     (assert (not (null chanarray)))
     (loop
        for i below (length chanarray)
@@ -233,7 +233,7 @@ new thread's name."
     (:recv (channel-arecv c))))
 
 (defun altexec (alt)
-  (let ((chanarray (chanarray (alt-c alt) (otherop (alt-op alt)))))
+  (let ((chanarray (chanarray (alt-channel alt) (otherop (alt-op alt)))))
     (if (plusp (length chanarray))
         (let ((other (aref chanarray (random (length chanarray)))))
           (altcopy alt other)
@@ -254,26 +254,26 @@ new thread's name."
   (when (not (or sender receiver))
     (return-from altcopy))
   (assert (not (null sender)))
-  (let ((channel (alt-c sender)))
+  (let ((channel (alt-channel sender)))
     (when (eq (alt-op sender) :recv)
       (psetf sender receiver receiver sender))
     (assert (or (null sender) (eq (alt-op sender) :send)))
     (assert (or (null receiver) (eq (alt-op receiver) :recv)))
     ;; channel is empty (or unbuffered) - copy directly.
-    (when (and (not (null sender)) (not (null receiver)) (zerop (channel-number-buffered channel)))
+    (when (and (not (null sender)) (not (null receiver)) (zerop (channel-num-buffered channel)))
       (setf (alt-v receiver) (alt-v sender))
       (return-from altcopy))
     ;; otherwise it's always okay to receive and then send.
     (when (not (null receiver))
       (setf (alt-v receiver) (aref (channel-buffer channel) (channel-off channel)))
-      (decf (channel-number-buffered channel))
+      (decf (channel-num-buffered channel))
       (when (eql (incf (channel-off channel)) (channel-buffer-size channel))
         (setf (channel-off channel) 0)))
     (when sender
       (setf (aref (channel-buffer channel)
-                  (mod (+ (channel-off channel) (channel-number-buffered channel))
+                  (mod (+ (channel-off channel) (channel-num-buffered channel))
                        (channel-buffer-size channel))) (alt-v sender))
-      (incf (channel-number-buffered channel)))))
+      (incf (channel-num-buffered channel)))))
 
 ;; wait for any of the channel operations given in alts to complete.
 ;; return the member of alts that completed.
@@ -282,8 +282,8 @@ new thread's name."
    blocking unless CANBLOCK. Return the member of ALTS that was
    activated, or NIL if the operation would have blocked.
    This is the primitive function used by the alt macro"
-  (mapc (fun (setf (alt-proc alt) *proc*
-                   (alt-xalt alt) alts))
+  (mapc (fun (setf (alt-proc _) *proc*
+                   (alt-xalt _) alts))
         alts)
   (acquire-lock *chanlock*)
   ;; execute alt if possible
@@ -300,14 +300,14 @@ new thread's name."
   (unless canblock
     (release-lock *chanlock*)
     (return-from chanalt nil))
-  (mapc (fun (when (alt-c _) (altqueue _))) alts)
+  (mapc (fun (when (alt-channel _) (altqueue _))) alts)
   (assert (not (proc-woken-p *proc*)))
   (loop
      (note "condition wait")
      (handler-case (condition-wait (proc-q *proc*) *chanlock*)
        (terminate ()
          ;; note that this code runs when *chanlock* has been reacquired
-         (mapc (fun (when (alt-c _) (altqueue _))) alts)
+         (mapc (fun (when (alt-channel _) (altqueue _))) alts)
          (release-lock *chanlock*)
          (error 'terminate)))
      (note "woken")
