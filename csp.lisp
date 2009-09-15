@@ -104,7 +104,7 @@
 ;; same time.
 ;;
 ;; it's just not worth the extra effort.
-(defvar *chanlock* (make-lock)
+(defvar *chanlock* (make-lock "CSP Global Channel Lock")
   "Global channel lock.")
 
 (defun opposite-op (op)
@@ -125,12 +125,13 @@
   (woken-p nil	:type boolean)
   (thread  nil))
 
-(defvar *proc* (make-proc)
+(defvar *proc* (make-proc :thread (current-thread))
   "Bound to the current proc.")
 
 (defmethod print-object ((proc proc) stream)
   (print-unreadable-object (proc stream :type t :identity t)
-    (format stream "~A" (thread-name (proc-thread proc)))))
+    (format stream "~:[NONE~;~A~]" (proc-thread proc)
+            (when (proc-thread proc) (thread-name (proc-thread proc))))))
 
 (defun kill (proc)
   (with-lock-held (*chanlock*)
