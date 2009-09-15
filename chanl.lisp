@@ -206,51 +206,6 @@ new thread's name."
     (:send (channel-asend channel))
     (:recv (channel-arecv channel))))
 
-;; wait for any of the channel operations given in alts to complete.
-;; return the member of alts that completed.
-;; TODO - Fix the mess of locks, and make this shit restart elegantly.
-;; TODO - grok wtf terminate is supposed to do
-(defun chanalt (alts #+nil&aux (canblock t))
-  "Perform one of the operations in the alt structures listed in ALTS.
-   Return the member of ALTS that was
-   activated, or NIL if the operation would have blocked.
-   This is the primitive function used by the alt macro"
-  (mapc (fun (setf (alt-proc _) *proc*
-                   (alt-xalt _) alts))
-        alts)
-  (acquire-lock *chanlock*)
-  ;; execute alt if possible
-  (let ((ncan (count-if #'execp alts)))
-    (when (plusp ncan)
-      (let ((j (random ncan)))
-        (loop for i in alts when (execp i)
-           do (when (zerop j)
-                (unwind-protect (exec-alt i)
-                  (release-lock *chanlock*))
-                (return-from chanalt i))
-             (setf j (1- j))))))
-  #+nil ;; Gotta double-check how canblock actually works.
-  (unless canblock
-    (release-lock *chanlock*)
-    (return-from chanalt nil))
-  (mapc (fun (when (alt-channel _) (enqueue-alt _))) alts)
-  (assert (not (proc-woken-p *proc*)))
-  (loop
-     (note "condition wait")
-     (handler-case (condition-wait (proc-q *proc*) *chanlock*)
-       (terminate ()
-         ;; note that this code runs when *chanlock* has been reacquired
-         (mapc (fun (when (alt-channel _) (enqueue-alt _))) alts)
-         (release-lock *chanlock*)
-         (error 'terminate)))
-     (note "woken")
-     (when (proc-woken-p *proc*)
-       (setf (proc-woken-p *proc*) nil)
-       (let ((r (car (alt-xalt (car alts)))))
-         (release-lock *chanlock*)
-         (return-from chanalt r)))
-     (note "but not actually woken")))
-
 (defun recv (channel)
   "Receive a value from the CHANNEL"
   (let ((alt (make-alt :channel channel :op :recv)))
@@ -359,6 +314,51 @@ new thread's name."
                   (mod (+ (channel-off channel) (channel-num-buffered channel))
                        (channel-buffer-size channel))) (alt-value sender))
       (incf (channel-num-buffered channel)))))
+
+;; wait for any of the channel operations given in alts to complete.
+;; return the member of alts that completed.
+;; TODO - Fix the mess of locks, and make this shit restart elegantly.
+;; TODO - grok wtf terminate is supposed to do
+(defun chanalt (alts #+nil&aux (canblock t))
+  "Perform one of the operations in the alt structures listed in ALTS.
+   Return the member of ALTS that was
+   activated, or NIL if the operation would have blocked.
+   This is the primitive function used by the alt macro"
+  (mapc (fun (setf (alt-proc _) *proc*
+                   (alt-xalt _) alts))
+        alts)
+  (acquire-lock *chanlock*)
+  ;; execute alt if possible
+  (let ((ncan (count-if #'execp alts)))
+    (when (plusp ncan)
+      (let ((j (random ncan)))
+        (loop for i in alts when (execp i)
+           do (when (zerop j)
+                (unwind-protect (exec-alt i)
+                  (release-lock *chanlock*))
+                (return-from chanalt i))
+             (setf j (1- j))))))
+  #+nil ;; Gotta double-check how canblock actually works.
+  (unless canblock
+    (release-lock *chanlock*)
+    (return-from chanalt nil))
+  (mapc (fun (when (alt-channel _) (enqueue-alt _))) alts)
+  (assert (not (proc-woken-p *proc*)))
+  (loop
+     (note "condition wait")
+     (handler-case (condition-wait (proc-q *proc*) *chanlock*)
+       (terminate ()
+         ;; note that this code runs when *chanlock* has been reacquired
+         (mapc (fun (when (alt-channel _) (enqueue-alt _))) alts)
+         (release-lock *chanlock*)
+         (error 'terminate)))
+     (note "woken")
+     (when (proc-woken-p *proc*)
+       (setf (proc-woken-p *proc*) nil)
+       (let ((r (car (alt-xalt (car alts)))))
+         (release-lock *chanlock*)
+         (return-from chanalt r)))
+     (note "but not actually woken")))
 
 ;;; ALT Macro
 (defmacro alt (&body body)
