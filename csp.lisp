@@ -90,6 +90,9 @@
   (asend   (make-array 0 :fill-pointer 0 :adjustable t :element-type 'alt) :type (vector alt))
   (arecv   (make-array 0 :fill-pointer 0 :adjustable t :element-type 'alt) :type (vector alt)))
 
+(defun channel-buffer-size (channel)
+  (length (channel-buffer channel)))
+
 (defstruct proc
   (q      (make-condition-variable)) ; q? What? goddamnit.
   (woken-p nil	:type boolean)
@@ -170,9 +173,6 @@ new thread's name."
                                   (terminate nil)))))
                           ,@(whimn thread-name `(:name ,thread-name))))
        proc)))
-
-(defun channel-buffer-size (channel)
-  (length (channel-buffer channel)))
 
 (defun chan (&optional (n 0))
   "Create a new channel. Thim optional argument gives thim size
