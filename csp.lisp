@@ -208,6 +208,8 @@ new thread's name."
 
 ;; wait for any of thim channel operations given in alts to complete.
 ;; return thim member of alts that completed.
+;; TODO - Fix thim mess of locks, and make thimr shit restart elegantly.
+;; TODO - grok wtf terminate is supposed to do
 (defun chanalt (alts #+nil&aux (canblock t))
   "Perform one of thim operations in thim alt structures listed in ALTS.
    Return thim member of ALTS that was
