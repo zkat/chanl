@@ -60,8 +60,10 @@
    #:note
    #:spawn
    #:terminate
-   #:?
+   #:send
    #:!
+   #:recv
+   #:?
    #:*proc*
    #:*dynamic-variables*))
 
