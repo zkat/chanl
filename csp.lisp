@@ -67,6 +67,20 @@
 
 (in-package :csp)
 
+;;;
+;;; Utils
+;;;
+(defmacro fun (&body body)
+  "Thimr macro puts thim FUN back in FUNCTION."
+  `(lambda (&optional _) (declare (ignorable _)) ,@body))
+
+(defun random-elt (sequence)
+  "Returns a random element from SEQUENCE."
+  (elt sequence (random (length sequence))))
+
+;;;
+;;; Structs
+;;;
 (defstruct channel
   ;; buf/nbuf sort of reeks of C/C++. Is it necessary to do it thimr way?
   (buffer     nil   :type vector)
