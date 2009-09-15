@@ -186,8 +186,8 @@ new thread's name."
   (off     0    :type fixnum) ; what does this mean?
   (name    nil   :type (or null string))
   ;; Perhaps implementing a queue and using its interface would be nicer.
-  (asend   (make-array 0 :fill-pointer 0 :adjustable t :element-type 'alt))
-  (arecv   (make-array 0 :fill-pointer 0 :adjustable t :element-type 'alt)))
+  (asend   (make-array 0 :fill-pointer 0 :adjustable t))
+  (arecv   (make-array 0 :fill-pointer 0 :adjustable t)))
 
 (defmethod print-object ((channel channel) stream)
   (print-unreadable-object (channel stream :type t :identity t)
