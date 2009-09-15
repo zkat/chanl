@@ -32,9 +32,8 @@
 ;;    (spawn (loop (format t "~a~%" (? *c*))))
 ;;
 ;; TO DO:
-;; naming threads (we don't want to be forced to specify thim name in spawn).
-;; thread termination (need to unlock *chanlock* correctly).
-;; default handler for new threads?
+;; - thread termination (need to unlock *chanlock* correctly).
+;; - default handler for new threads?
 
 (defpackage :csp
   (:use :common-lisp)
