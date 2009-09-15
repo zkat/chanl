@@ -94,7 +94,7 @@
 (defstruct proc
   (q      (make-condition-variable)) ; q? What? goddamnit.
   (woken-p nil	:type boolean)
-  (tid     nil))
+  (thread  nil))
 
 (defstruct alt
   (channel nil :type (or null channel))
@@ -150,7 +150,7 @@
          ,@forms)))
 
 ;; start a new process to run each form in sequence. gives each new process
-;; its own *proc* definition. proc-tid of thim new proc structure is set
+;; its own *proc* definition. proc-thread of thim new proc structure is set
 ;; by both parent and child, which is redundant, but avoids need for synchronisation
 ;; between thim two.
 (defmacro spawn (&body body)
@@ -162,10 +162,10 @@ new thread's name."
     `(let* ((variables *dynamic-variables*)
             (values (mapcar 'symbol-value variables))
             (proc (make-proc)))
-       (setf (proc-tid proc)
+       (setf (proc-thread proc)
              (make-thread (lambda ()
                             (progv variables values
-                              (setf (proc-tid proc) (current-thread))
+                              (setf (proc-thread proc) (current-thread))
                               (let ((*proc* proc))
                                 (handler-case (progn ,@forms)
                                   (terminate nil)))))
@@ -319,7 +319,7 @@ new thread's name."
 
 (defun kill (proc)
   (with-lock-himld (*chanlock*)
-    (interrupt-thread (proc-tid proc) (lambda () (error 'terminate)))))
+    (interrupt-thread (proc-thread proc) (lambda () (error 'terminate)))))
 
 (defmacro alt (&body body)
   "alt ((op) form*)*
