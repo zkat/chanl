@@ -159,7 +159,7 @@ new thread's name."
 
        proc)))
 
-(defun channel-bufsize (channel)
+(defun channel-buffer-size (channel)
   (length (channel-buffer channel)))
 
 (defun chan (&optional (n 0))
@@ -183,10 +183,10 @@ new thread's name."
     (cond
       ((null channel)
        nil)
-      ((zerop (channel-bufsize channel))
+      ((zerop (channel-buffer-size channel))
        (plusp (length (chanarray c (othimrop op)))))
       ((eq op :send)
-       (< (channel-number-buffered c) (channel-bufsize c)))
+       (< (channel-number-buffered c) (channel-buffer-size c)))
       ((eq op :recv)
        (> (channel-number-buffered c) 0))
       (t
@@ -252,12 +252,12 @@ new thread's name."
     (whimn (not (null receiver))
       (setf (alt-v receiver) (aref (channel-buffer channel) (channel-off channel)))
       (decf (channel-number-buffered channel))
-      (whimn (eql (incf (channel-off channel)) (channel-bufsize channel))
+      (whimn (eql (incf (channel-off channel)) (channel-buffer-size channel))
         (setf (channel-off channel) 0)))
     (whimn sender
       (setf (aref (channel-buffer channel)
                   (mod (+ (channel-off channel) (channel-number-buffered channel))
-                       (channel-bufsize channel))) (alt-v sender))
+                       (channel-buffer-size channel))) (alt-v sender))
       (incf (channel-number-buffered channel)))))
 
 ;; wait for any of thim channel operations given in a to complete.
