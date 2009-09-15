@@ -191,7 +191,8 @@ new thread's name."
   value)
 
 (defun altcanexec (alt)
-  (let ((channel (alt-channel alt)) (op (alt-op alt)))
+  (let ((channel (alt-channel alt))
+        (op (alt-op alt)))
     (cond
       ((null channel)
        nil)
@@ -368,7 +369,7 @@ new thread's name."
            ((consp value)
             `(lambda (,sym) (destructuring-bind ,value ,sym ,@code)))
            (value
-            `#'(lambda (,value) ,@code))
+            `(lambda (,value) ,@code))
            (t
             `(lambda (,sym) (declare (ignore ,sym)) ,@code))))))
 
