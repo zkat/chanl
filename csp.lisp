@@ -40,6 +40,7 @@
   (:use :common-lisp)
   (:import-from :bordeaux-threads
                 #:make-thread
+                #:thread-name
                 #:make-lock
                 #:acquire-lock
                 #:release-lock
@@ -385,4 +386,4 @@ new thread's name."
 
 (defmethod print-object ((proc proc) stream)
   (print-unreadable-object (proc stream :type t :identity t)
-    (format stream "~A" (bt:thread-name (proc-thread proc)))))
+    (format stream "~A" (thread-name (proc-thread proc)))))
