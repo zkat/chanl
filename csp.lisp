@@ -187,7 +187,7 @@ new thread's name."
 
 (defun ! (channel value)
   "Send VALUE down CHANNEL"
-  (chanalt t (list (make-alt :channel channel :op :send :v value)))
+  (chanalt t (list (make-alt :channel channel :op :send :value value)))
   value)
 
 (defun altcanexec (alt)
@@ -361,7 +361,7 @@ new thread's name."
     `(make-alt
       :op ,op
       :channel ,channel
-      ,@(when (eq op :send) `(:v ,value))
+      ,@(when (eq op :send) `(:value ,value))
       :r ,(cond
            ((eq op :send)
             `(fun ,@code))
