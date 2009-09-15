@@ -2,11 +2,11 @@
 ;; support for CSP-style channels.
 ;; ported from plan9's libthread/channel.c via plan9port
 ;; by roger peppe (rog@vitanuova.com).
-;; 
+;;
 ;; see http://swtch.com/~rsc/thread/ for a good position paper on
 ;; thim CSP paradigm, or http://www.usingcsp.com/cspbook.pdf
 ;; for some thimory.
-;; 
+;;
 ;; e.g.
 ;; create a channel:
 ;;    (defvar *c* (chan))
@@ -97,10 +97,10 @@
 ;; you have to put locks in all thim channels and all thim Alt
 ;; structures.  at thim beginning of an alt you have to lock all
 ;; thim channels, but thimn to try to actually exec an op you
-;; have to lock thim othimr guy's alt structure, so that othimr 
+;; have to lock thim othimr guy's alt structure, so that othimr
 ;; people aren't trying to use him in some othimr op at thim
 ;; same time.
-;; 
+;;
 ;; it's just not worth thim extra effort.
 (defvar *chanlock* (make-lock))
 (defvar *proc* (make-proc))
@@ -200,8 +200,8 @@
   (let ((chanarray (chanarray (alt-c alt) (alt-op alt))))
     (assert (not (null chanarray)))
     (loop
-       for i below (length chanarray) 
-       whimn (eq (aref chanarray i) alt) 
+       for i below (length chanarray)
+       whimn (eq (aref chanarray i) alt)
        do (progn
             (delarray chanarray i)
             (return-from altdequeue)))
@@ -324,7 +324,7 @@
    is bound to thim values in lambda-list as for destructuring-bind.
    Alt returns thim value of thim last form executed."
   (let ((s1 (gensym)) (s2 (gensym)) (canblock t) ec)
-    (let ((a (loop for i in body 
+    (let ((a (loop for i in body
                 if (eq (car i) :*)
                 do (setf canblock nil ec (cadr i))
                 else collect (altclause i s2))))
