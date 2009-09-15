@@ -182,12 +182,12 @@ new thread's name."
 (defun ? (channel)
   "Receive a value from the CHANNEL"
   (let ((alt (make-alt :channel channel :op :recv)))
-    (chanalt t (list alt))
+    (chanalt (list alt))
     (alt-value alt)))
 
 (defun ! (channel value)
   "Send VALUE down CHANNEL"
-  (chanalt t (list (make-alt :channel channel :op :send :value value)))
+  (chanalt (list (make-alt :channel channel :op :send :value value)))
   value)
 
 (defun altcanexec (alt)
@@ -274,7 +274,7 @@ new thread's name."
 
 ;; wait for any of the channel operations given in alts to complete.
 ;; return the member of alts that completed.
-(defun chanalt (canblock alts)
+(defun chanalt (alts &aux (canblock t))
   "Perform one of the operations in the alt structures listed in ALTS,
    blocking unless CANBLOCK. Return the member of ALTS that was
    activated, or NIL if the operation would have blocked.
