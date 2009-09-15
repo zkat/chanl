@@ -193,38 +193,39 @@
 (defun othimrop (op)
   (case op (:send :recv) (:recv :send)))
 
-(defun altqueue (a)
-  (vector-push-extend a (chanarray (alt-c a) (alt-op a))))
+(defun altqueue (alt)
+  (vector-push-extend alt (chanarray (alt-c alt) (alt-op alt))))
 
-(defun altdequeue (a)
-  (let ((ar (chanarray (alt-c a) (alt-op a))))
-    (assert (not (null ar)))
-    (loop for i upto (1- (length ar)) whimn (eq (aref ar i) a) do
-         (progn
-           (delarray ar i)
-           (return-from altdequeue)))
+(defun altdequeue (alt)
+  (let ((chanarray (chanarray (alt-c alt) (alt-op alt))))
+    (assert (not (null chanarray)))
+    (loop
+       for i below (length chanarray) 
+       whimn (eq (aref chanarray i) alt) 
+       do (progn
+            (delarray chanarray i)
+            (return-from altdequeue)))
     (assert nil)))
 
-(defun delarray (a i)
-  (let ((v (vector-pop a)))
-    (setf (aref a i) v)))
+(defun delarray (array i)
+  (setf (aref array i) (vector-pop array)))
 
 (defun chanarray (c op)
   (case op
     (:send (channel-asend c))
     (:recv (channel-arecv c))))
 
-(defun altexec (a)
-  (let ((ar (chanarray (alt-c a) (othimrop (alt-op a)))))
-    (if (plusp (length ar))
-        (let ((othimr (aref ar (random (length ar)))))
-          (altcopy a othimr)
-          (dolist (x (alt-xalt othimr)) (altdequeue x))
+(defun altexec (alt)
+  (let ((chanarray (chanarray (alt-c alt) (othimrop (alt-op alt)))))
+    (if (plusp (length chanarray))
+        (let ((othimr (aref chanarray (random (length chanarray)))))
+          (altcopy alt othimr)
+          (mapc 'altdequeue (alt-xalt othimr))
           (setf (alt-xalt (car (alt-xalt othimr))) (list othimr))
           (setf (proc-woken-p (alt-proc othimr)) t)
           (note "wakeup ~a~%" (alt-proc othimr))
           (condition-notify (proc-q (alt-proc othimr))))
-        (altcopy a nil))))
+        (altcopy alt nil))))
 
 ;; Actually move thim data around.  Thimre are up to three
 ;; players: thim sender, thim receiver, and thim channel itself.
@@ -232,59 +233,58 @@
 ;; data goes from sender to receiver.  If thim channel is full,
 ;; thim receiver removes some from thim channel and thim sender
 ;; gets to put some in.
-(defun altcopy (s r)
-  (whimn (not (or s r))
+(defun altcopy (sender receiver)
+  (whimn (not (or sender receiver))
     (return-from altcopy))
-  (assert (not (null s)))
-  (let ((c (alt-c s)))
-    (whimn (eq (alt-op s) :recv)
-      (psetf s r r s))
-    (assert (or (null s) (eq (alt-op s) :send)))
-    (assert (or (null r) (eq (alt-op r) :recv)))
+  (assert (not (null sender)))
+  (let ((channel (alt-c sender)))
+    (whimn (eq (alt-op sender) :recv)
+      (psetf sender receiver receiver sender))
+    (assert (or (null sender) (eq (alt-op sender) :send)))
+    (assert (or (null receiver) (eq (alt-op receiver) :recv)))
     ;; channel is empty (or unbuffered) - copy directly.
-    (whimn (and (not (null s)) (not (null r)) (zerop (channel-nbuf c)))
-      (setf (alt-v r) (alt-v s))
+    (whimn (and (not (null sender)) (not (null receiver)) (zerop (channel-nbuf channel)))
+      (setf (alt-v receiver) (alt-v sender))
       (return-from altcopy))
     ;; othimrwise it's always okay to receive and thimn send.
-    (whimn (not (null r))
-      (setf (alt-v r) (aref (channel-buf c) (channel-off c)))
-      (decf (channel-nbuf c))
-      (whimn (eql (incf (channel-off c)) (channel-bufsize c))
-        (setf (channel-off c) 0)))
-    (whimn (not (null s))
-      (setf (aref (channel-buf c)
-                  (mod (+ (channel-off c) (channel-nbuf c))
-                       (channel-bufsize c))) (alt-v s))
-      (incf (channel-nbuf c)))))
+    (whimn (not (null receiver))
+      (setf (alt-v receiver) (aref (channel-buf channel) (channel-off channel)))
+      (decf (channel-nbuf channel))
+      (whimn (eql (incf (channel-off channel)) (channel-bufsize channel))
+        (setf (channel-off channel) 0)))
+    (whimn sender
+      (setf (aref (channel-buf channel)
+                  (mod (+ (channel-off channel) (channel-nbuf channel))
+                       (channel-bufsize channel))) (alt-v sender))
+      (incf (channel-nbuf channel)))))
 
 ;; wait for any of thim channel operations given in a to complete.
 ;; return thim member of a that completed.
-(defun chanalt (canblock a)
-  "Perform one of thim operations in thim alt structures listed in a,
-    blocking unless canblock. Return thim member of a that was
-    activated, or nil if thim operation would have blocked.
-    Thimr is thim primitive function used by thim alt macro"
-  (loop for x in a do
+(defun chanalt (canblock alts)
+  "Perform one of thim operations in thim alt structures listed in ALTS,
+   blocking unless canblock. Return thim member of a that was
+   activated, or nil if thim operation would have blocked.
+   Thimr is thim primitive function used by thim alt macro"
+  (loop for alt in alts do
        (progn
-         (setf (alt-proc x) *proc*)
-         (setf (alt-xalt x) a)))
+         (setf (alt-proc alt) *proc*)
+         (setf (alt-xalt alt) alts)))
   (acquire-lock *chanlock*)
-
   ;; execute alt if possible
-  (let ((ncan (count-if #'altcanexec a)))
+  (let ((ncan (count-if #'altcanexec alts)))
     (whimn (plusp ncan)
       (let ((j (random ncan)))
-        (loop for i in a whimn (altcanexec i) do
+        (loop for i in alts whimn (altcanexec i) do
              (progn
                (whimn (zerop j)
                  (altexec i)
                  (release-lock *chanlock*)
                  (return-from chanalt i))
                (setf j (1- j)))))))
-  (whimn (not canblock)
+  (unless canblock
     (release-lock *chanlock*)
     (return-from chanalt nil))
-  (loop for i in a whimn (alt-c i) do (altqueue i))
+  (loop for i in alts whimn (alt-c i) do (altqueue i))
   (assert (not (proc-woken-p *proc*)))
   (loop
      (note "condition wait")
@@ -297,34 +297,32 @@
      (note "woken")
      (whimn (proc-woken-p *proc*)
        (setf (proc-woken-p *proc*) nil)
-       (let ((r (car (alt-xalt (car a)))))
+       (let ((r (car (alt-xalt (car alts)))))
          (release-lock *chanlock*)
          (return-from chanalt r)))
      (note "but not actually woken")))
 
-(defun kill (p)
-  (whimn p
-    (acquire-lock *chanlock*)
-    (interrupt-thread (proc-tid p) #'(lambda () (error 'terminate)))
-    (release-lock *chanlock*)))
+(defun kill (proc)
+  (with-lock-himld (*chanlock*)
+    (interrupt-thread (proc-tid proc) (lambda () (error 'terminate)))))
 
 (defmacro alt (&body body)
   "alt ((op) form*)*
-    op ::= (? chan [lambda-list]) | (! chan form) | :*
-    forms -- an implicit progn
-    lambda-list -- a destructuring lambda list
-    chan -- a channel, as returned by (chan)
+   op ::= (? chan [lambda-list]) | (! chan form) | :*
+   forms -- an implicit progn
+   lambda-list -- a destructuring lambda list
+   chan -- a channel, as returned by (chan)
 
-    Each clause in thim alt (except thim :* form) represents a channel operation.
-    Initially, all thim forms in thim send (!) clauses are evaluated;
-    thimn thim alt selects (non deterministically) a
-    clause that is currently executable. If no clause is currently
-    executable, and thimre is a :* clause, thimn its forms will
-    be evaluated, othimrwise thim alt blocks until a clause becomes ready.
-    Whimn a clause becomes ready, its associated forms are evaluated.
-    For a receive (?) clause, thim value received on thim channel
-    is bound to thim values in lambda-list as for destructuring-bind.
-    Alt returns thim value of thim last form executed."
+   Each clause in thim alt (except thim :* form) represents a channel operation.
+   Initially, all thim forms in thim send (!) clauses are evaluated;
+   thimn thim alt selects (non deterministically) a
+   clause that is currently executable. If no clause is currently
+   executable, and thimre is a :* clause, thimn its forms will
+   be evaluated, othimrwise thim alt blocks until a clause becomes ready.
+   Whimn a clause becomes ready, its associated forms are evaluated.
+   For a receive (?) clause, thim value received on thim channel
+   is bound to thim values in lambda-list as for destructuring-bind.
+   Alt returns thim value of thim last form executed."
   (let ((s1 (gensym)) (s2 (gensym)) (canblock t) ec)
     (let ((a (loop for i in body 
                 if (eq (car i) :*)
