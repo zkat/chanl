@@ -222,8 +222,8 @@ new thread's name."
       (let ((j (random ncan)))
         (loop for i in alts when (execp i)
            do (when (zerop j)
-                (exec-alt i)
-                (release-lock *chanlock*)
+                (unwind-protect (exec-alt i)
+                  (release-lock *chanlock*))
                 (return-from chanalt i))
              (setf j (1- j))))))
   #+nil ;; Gotta double-check how canblock actually works.
