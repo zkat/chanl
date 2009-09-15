@@ -82,7 +82,6 @@
 ;;; Structs
 ;;;
 (defstruct channel
-  ;; buf/nbuf sort of reeks of C/C++. Is it necessary to do it this way?
   (buffer     nil   :type vector)
   (num-buffered    0    :type fixnum)
   (off     0    :type fixnum) ; what does this mean?
@@ -170,7 +169,6 @@ new thread's name."
                                 (handler-case (progn ,@forms)
                                   (terminate nil)))))
                           ,@(when thread-name `(:name ,thread-name))))
-
        proc)))
 
 (defun channel-buffer-size (channel)
