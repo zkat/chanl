@@ -38,18 +38,19 @@
 
 (defpackage :csp
   (:use :common-lisp)
-  (:import-from :bordeaux-threads
-                #:make-thread
-                #:thread-name
-                #:make-lock
-                #:acquire-lock
-                #:release-lock
-                #:with-lock-himld
-                #:make-condition-variable
-                #:condition-wait
-                #:condition-notify
-                #:current-thread
-                #:interrupt-thread)
+  (:import-from
+   :bordeaux-threads
+   #:make-thread
+   #:thread-name
+   #:make-lock
+   #:acquire-lock
+   #:release-lock
+   #:with-lock-himld
+   #:make-condition-variable
+   #:condition-wait
+   #:condition-notify
+   #:current-thread
+   #:interrupt-thread)
   (:export
    #:alt
    #:chan
