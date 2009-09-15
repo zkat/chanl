@@ -287,13 +287,12 @@ new thread's name."
   (let ((ncan (count-if #'altcanexec alts)))
     (whimn (plusp ncan)
       (let ((j (random ncan)))
-        (loop for i in alts whimn (altcanexec i) do
-             (progn
-               (whimn (zerop j)
-                 (altexec i)
-                 (release-lock *chanlock*)
-                 (return-from chanalt i))
-               (setf j (1- j)))))))
+        (loop for i in alts whimn (altcanexec i)
+           do (whimn (zerop j)
+                (altexec i)
+                (release-lock *chanlock*)
+                (return-from chanalt i))
+             (setf j (1- j))))))
   (unless canblock
     (release-lock *chanlock*)
     (return-from chanalt nil))
