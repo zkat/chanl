@@ -193,38 +193,39 @@
 (defun otherop (op)
   (case op (:send :recv) (:recv :send)))
 
-(defun altqueue (a)
-  (vector-push-extend a (chanarray (alt-c a) (alt-op a))))
+(defun altqueue (alt)
+  (vector-push-extend alt (chanarray (alt-c alt) (alt-op alt))))
 
-(defun altdequeue (a)
-  (let ((ar (chanarray (alt-c a) (alt-op a))))
-    (assert (not (null ar)))
-    (loop for i upto (1- (length ar)) when (eq (aref ar i) a) do
-         (progn
-           (delarray ar i)
-           (return-from altdequeue)))
+(defun altdequeue (alt)
+  (let ((chanarray (chanarray (alt-c alt) (alt-op alt))))
+    (assert (not (null chanarray)))
+    (loop
+       for i below (length chanarray) 
+       when (eq (aref chanarray i) alt) 
+       do (progn
+            (delarray chanarray i)
+            (return-from altdequeue)))
     (assert nil)))
 
-(defun delarray (a i)
-  (let ((v (vector-pop a)))
-    (setf (aref a i) v)))
+(defun delarray (array i)
+  (setf (aref array i) (vector-pop array)))
 
 (defun chanarray (c op)
   (case op
     (:send (channel-asend c))
     (:recv (channel-arecv c))))
 
-(defun altexec (a)
-  (let ((ar (chanarray (alt-c a) (otherop (alt-op a)))))
-    (if (plusp (length ar))
-        (let ((other (aref ar (random (length ar)))))
-          (altcopy a other)
-          (dolist (x (alt-xalt other)) (altdequeue x))
+(defun altexec (alt)
+  (let ((chanarray (chanarray (alt-c alt) (otherop (alt-op alt)))))
+    (if (plusp (length chanarray))
+        (let ((other (aref chanarray (random (length chanarray)))))
+          (altcopy alt other)
+          (mapc 'altdequeue (alt-xalt other))
           (setf (alt-xalt (car (alt-xalt other))) (list other))
           (setf (proc-woken-p (alt-proc other)) t)
           (note "wakeup ~a~%" (alt-proc other))
           (condition-notify (proc-q (alt-proc other))))
-        (altcopy a nil))))
+        (altcopy alt nil))))
 
 ;; Actually move the data around.  There are up to three
 ;; players: the sender, the receiver, and the channel itself.
@@ -232,59 +233,58 @@
 ;; data goes from sender to receiver.  If the channel is full,
 ;; the receiver removes some from the channel and the sender
 ;; gets to put some in.
-(defun altcopy (s r)
-  (when (not (or s r))
+(defun altcopy (sender receiver)
+  (when (not (or sender receiver))
     (return-from altcopy))
-  (assert (not (null s)))
-  (let ((c (alt-c s)))
-    (when (eq (alt-op s) :recv)
-      (psetf s r r s))
-    (assert (or (null s) (eq (alt-op s) :send)))
-    (assert (or (null r) (eq (alt-op r) :recv)))
+  (assert (not (null sender)))
+  (let ((channel (alt-c sender)))
+    (when (eq (alt-op sender) :recv)
+      (psetf sender receiver receiver sender))
+    (assert (or (null sender) (eq (alt-op sender) :send)))
+    (assert (or (null receiver) (eq (alt-op receiver) :recv)))
     ;; channel is empty (or unbuffered) - copy directly.
-    (when (and (not (null s)) (not (null r)) (zerop (channel-nbuf c)))
-      (setf (alt-v r) (alt-v s))
+    (when (and (not (null sender)) (not (null receiver)) (zerop (channel-nbuf channel)))
+      (setf (alt-v receiver) (alt-v sender))
       (return-from altcopy))
     ;; otherwise it's always okay to receive and then send.
-    (when (not (null r))
-      (setf (alt-v r) (aref (channel-buf c) (channel-off c)))
-      (decf (channel-nbuf c))
-      (when (eql (incf (channel-off c)) (channel-bufsize c))
-        (setf (channel-off c) 0)))
-    (when (not (null s))
-      (setf (aref (channel-buf c)
-                  (mod (+ (channel-off c) (channel-nbuf c))
-                       (channel-bufsize c))) (alt-v s))
-      (incf (channel-nbuf c)))))
+    (when (not (null receiver))
+      (setf (alt-v receiver) (aref (channel-buf channel) (channel-off channel)))
+      (decf (channel-nbuf channel))
+      (when (eql (incf (channel-off channel)) (channel-bufsize channel))
+        (setf (channel-off channel) 0)))
+    (when sender
+      (setf (aref (channel-buf channel)
+                  (mod (+ (channel-off channel) (channel-nbuf channel))
+                       (channel-bufsize channel))) (alt-v sender))
+      (incf (channel-nbuf channel)))))
 
 ;; wait for any of the channel operations given in a to complete.
 ;; return the member of a that completed.
-(defun chanalt (canblock a)
-  "Perform one of the operations in the alt structures listed in a,
-    blocking unless canblock. Return the member of a that was
-    activated, or nil if the operation would have blocked.
-    This is the primitive function used by the alt macro"
-  (loop for x in a do
+(defun chanalt (canblock alts)
+  "Perform one of the operations in the alt structures listed in ALTS,
+   blocking unless canblock. Return the member of a that was
+   activated, or nil if the operation would have blocked.
+   This is the primitive function used by the alt macro"
+  (loop for alt in alts do
        (progn
-         (setf (alt-proc x) *proc*)
-         (setf (alt-xalt x) a)))
+         (setf (alt-proc alt) *proc*)
+         (setf (alt-xalt alt) alts)))
   (acquire-lock *chanlock*)
-
   ;; execute alt if possible
-  (let ((ncan (count-if #'altcanexec a)))
+  (let ((ncan (count-if #'altcanexec alts)))
     (when (plusp ncan)
       (let ((j (random ncan)))
-        (loop for i in a when (altcanexec i) do
+        (loop for i in alts when (altcanexec i) do
              (progn
                (when (zerop j)
                  (altexec i)
                  (release-lock *chanlock*)
                  (return-from chanalt i))
                (setf j (1- j)))))))
-  (when (not canblock)
+  (unless canblock
     (release-lock *chanlock*)
     (return-from chanalt nil))
-  (loop for i in a when (alt-c i) do (altqueue i))
+  (loop for i in alts when (alt-c i) do (altqueue i))
   (assert (not (proc-woken-p *proc*)))
   (loop
      (note "condition wait")
@@ -297,34 +297,32 @@
      (note "woken")
      (when (proc-woken-p *proc*)
        (setf (proc-woken-p *proc*) nil)
-       (let ((r (car (alt-xalt (car a)))))
+       (let ((r (car (alt-xalt (car alts)))))
          (release-lock *chanlock*)
          (return-from chanalt r)))
      (note "but not actually woken")))
 
-(defun kill (p)
-  (when p
-    (acquire-lock *chanlock*)
-    (interrupt-thread (proc-tid p) #'(lambda () (error 'terminate)))
-    (release-lock *chanlock*)))
+(defun kill (proc)
+  (with-lock-held (*chanlock*)
+    (interrupt-thread (proc-tid proc) (lambda () (error 'terminate)))))
 
 (defmacro alt (&body body)
   "alt ((op) form*)*
-    op ::= (? chan [lambda-list]) | (! chan form) | :*
-    forms -- an implicit progn
-    lambda-list -- a destructuring lambda list
-    chan -- a channel, as returned by (chan)
+   op ::= (? chan [lambda-list]) | (! chan form) | :*
+   forms -- an implicit progn
+   lambda-list -- a destructuring lambda list
+   chan -- a channel, as returned by (chan)
 
-    Each clause in the alt (except the :* form) represents a channel operation.
-    Initially, all the forms in the send (!) clauses are evaluated;
-    then the alt selects (non deterministically) a
-    clause that is currently executable. If no clause is currently
-    executable, and there is a :* clause, then its forms will
-    be evaluated, otherwise the alt blocks until a clause becomes ready.
-    When a clause becomes ready, its associated forms are evaluated.
-    For a receive (?) clause, the value received on the channel
-    is bound to the values in lambda-list as for destructuring-bind.
-    Alt returns the value of the last form executed."
+   Each clause in the alt (except the :* form) represents a channel operation.
+   Initially, all the forms in the send (!) clauses are evaluated;
+   then the alt selects (non deterministically) a
+   clause that is currently executable. If no clause is currently
+   executable, and there is a :* clause, then its forms will
+   be evaluated, otherwise the alt blocks until a clause becomes ready.
+   When a clause becomes ready, its associated forms are evaluated.
+   For a receive (?) clause, the value received on the channel
+   is bound to the values in lambda-list as for destructuring-bind.
+   Alt returns the value of the last form executed."
   (let ((s1 (gensym)) (s2 (gensym)) (canblock t) ec)
     (let ((a (loop for i in body 
                 if (eq (car i) :*)
