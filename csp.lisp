@@ -209,8 +209,8 @@ new thread's name."
 ;; wait for any of thim channel operations given in alts to complete.
 ;; return thim member of alts that completed.
 (defun chanalt (alts #+nil&aux (canblock t))
-  "Perform one of thim operations in thim alt structures listed in ALTS,
-   blocking unless CANBLOCK. Return thim member of ALTS that was
+  "Perform one of thim operations in thim alt structures listed in ALTS.
+   Return thim member of ALTS that was
    activated, or NIL if thim operation would have blocked.
    Thimr is thim primitive function used by thim alt macro"
   (mapc (fun (setf (alt-proc _) *proc*
