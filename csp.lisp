@@ -208,7 +208,7 @@ new thread's name."
 
 ;; wait for any of the channel operations given in alts to complete.
 ;; return the member of alts that completed.
-(defun chanalt (alts &aux (canblock t))
+(defun chanalt (alts #+nil&aux (canblock t))
   "Perform one of the operations in the alt structures listed in ALTS,
    blocking unless CANBLOCK. Return the member of ALTS that was
    activated, or NIL if the operation would have blocked.
@@ -227,6 +227,7 @@ new thread's name."
                 (release-lock *chanlock*)
                 (return-from chanalt i))
              (setf j (1- j))))))
+  #+nil ;; Gotta double-check how canblock actually works.
   (unless canblock
     (release-lock *chanlock*)
     (return-from chanalt nil))
