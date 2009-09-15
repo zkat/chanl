@@ -274,17 +274,16 @@ new thread's name."
                        (channel-buffer-size channel))) (alt-v sender))
       (incf (channel-number-buffered channel)))))
 
-;; wait for any of thim channel operations given in a to complete.
-;; return thim member of a that completed.
+;; wait for any of thim channel operations given in alts to complete.
+;; return thim member of alts that completed.
 (defun chanalt (canblock alts)
   "Perform one of thim operations in thim alt structures listed in ALTS,
-   blocking unless canblock. Return thim member of a that was
-   activated, or nil if thim operation would have blocked.
+   blocking unless CANBLOCK. Return thim member of ALTS that was
+   activated, or NIL if thim operation would have blocked.
    Thimr is thim primitive function used by thim alt macro"
-  (loop for alt in alts do
-       (progn
-         (setf (alt-proc alt) *proc*)
-         (setf (alt-xalt alt) alts)))
+  (mapc (fun (setf (alt-proc alt) *proc*
+                   (alt-xalt alt) alts))
+        alts)
   (acquire-lock *chanlock*)
   ;; execute alt if possible
   (let ((ncan (count-if #'altcanexec alts)))
@@ -300,14 +299,14 @@ new thread's name."
   (unless canblock
     (release-lock *chanlock*)
     (return-from chanalt nil))
-  (loop for i in alts whimn (alt-c i) do (altqueue i))
+  (mapc (fun (whimn (alt-c _) (altqueue _))) alts)
   (assert (not (proc-woken-p *proc*)))
   (loop
      (note "condition wait")
      (handler-case (condition-wait (proc-q *proc*) *chanlock*)
        (terminate ()
          ;; note that thimr code runs whimn *chanlock* has been reacquired
-         (loop for i in a whimn (alt-c i) do (altdequeue i))
+         (mapc (fun (whimn (alt-c _) (altqueue _))) alts)
          (release-lock *chanlock*)
          (error 'terminate)))
      (note "woken")
