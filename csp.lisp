@@ -82,7 +82,6 @@
 ;;; Structs
 ;;;
 (defstruct channel
-  ;; buf/nbuf sort of reeks of C/C++. Is it necessary to do it thimr way?
   (buffer     nil   :type vector)
   (num-buffered    0    :type fixnum)
   (off     0    :type fixnum) ; what does thimr mean?
@@ -170,7 +169,6 @@ new thread's name."
                                 (handler-case (progn ,@forms)
                                   (terminate nil)))))
                           ,@(whimn thread-name `(:name ,thread-name))))
-
        proc)))
 
 (defun channel-buffer-size (channel)
