@@ -175,11 +175,6 @@ new thread's name."
        proc)))
 
 ;;;
-;;; Ops
-;;;
-
-
-;;;
 ;;; Channels
 ;;;
 (defstruct channel
@@ -276,7 +271,7 @@ new thread's name."
 ;;;
 (defstruct alt
   (channel nil :type (or null channel))
-  value ;;wtf is this
+  value
   (op     nil    :type symbol)
   (proc   nil    :type (or null proc))
   (xalt   nil    :type list) ;; and wtf is this?
