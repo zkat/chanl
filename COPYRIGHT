@@ -1,4 +1,4 @@
-Parts of the file csp.lisp have been derived from a C program that
+Parts of the file chanl.lisp have been derived from a C program that
 contains the following copyright notice:
 
 This software was developed as part of a project at MIT:
