@@ -121,3 +121,20 @@ new thread's name."
   "Create a new channel. The optional argument gives the size
    of the channel's buffer (default 0)"
   (make-instance 'channel :buffer-size buffer-size))
+
+;;;
+;;; Alternation macro
+;;;
+(defmacro alt (&body body)
+  (let ((sends (remove-if-not 'send-clause-p body))
+        (recvs (remove-if-not 'recv-clause-p body))
+        (else (remove-if-not 'else-clause-p body)))
+    ))
+
+(defun send-clause-p (clause)
+  (eq 'send (caar clause)))
+(defun recv-clause-p (clause)
+  (eq 'recv (caar clause)))
+(defun else-clause-p (clause)
+  (eq t (car clause)))
+
