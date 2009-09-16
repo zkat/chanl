@@ -92,7 +92,7 @@ new thread's name."
 (defgeneric recv-blocks-p (channel)
   (:method ((channel channel)) (channel-empty-p channel)))
 
-(defgeneric channel-enqueue (channel obj)
+(defgeneric send (channel obj)
   (:method ((channel channel) obj)
     (with-accessors ((buffer channel-buffer)
                      (chan-full-p channel-full-p)
@@ -108,9 +108,10 @@ new thread's name."
               (chan-full-p
                (bt:condition-wait enq-ok lock)
                (setf buffer (nconc buffer (list obj))))
-              (t (setf buffer (nconc buffer (list obj)))))))))
+              (t (setf buffer (nconc buffer (list obj)))))))
+    obj))
 
-(defgeneric channel-dequeue (channel)
+(defgeneric recv (channel)
   (:method ((channel channel))
     (with-accessors ((buffer channel-buffer)
                      (chan-full-p channel-full-p)
@@ -130,24 +131,9 @@ new thread's name."
 
 (defmethod print-object ((channel channel) stream)
   (print-unreadable-object (channel stream :type t :identity t)
-    (format stream "~a" (length (channel-buffer channel)))))
+    (format stream "~A/~A" (length (channel-buffer channel)) (channel-buffer-size channel))))
 
 (defun chan (&optional (buffer-size 0))
   "Create a new channel. The optional argument gives the size
    of the channel's buffer (default 0)"
   (make-instance 'channel :buffer-size buffer-size))
-
-(defun recv (channel)
-  "Receive a value from the CHANNEL"
-  (channel-dequeue channel))
-
-(defun send (channel value)
-  "Send VALUE down CHANNEL"
-  (channel-enqueue channel value) value)
-
-;;; These shall remain until I know I can get rid of them.
-(defun ! (channel value)
-  (send channel value))
-
-(defun ? (channel)
-  (recv channel))
