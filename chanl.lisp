@@ -92,90 +92,22 @@
        (force-output))))
 
 ;;;
-;;; Stuff
+;;; Threads
 ;;;
-(define-condition terminate () ()
-  (:documentation "Condition type used by KILL."))
-
-;; one can go through a lot of effort to avoid this global lock.
-;; you have to put locks in all the channels and all the Alt
-;; structures.  at the beginning of an alt you have to lock all
-;; the channels, but then to try to actually exec an op you
-;; have to lock the other guy's alt structure, so that other
-;; people aren't trying to use him in some other op at the
-;; same time.
-;;
-;; it's just not worth the extra effort.
-(defvar *chanlock* (make-lock "CSP Global Channel Lock")
-  "Global channel lock.")
-
 (defun opposite-op (op)
   (case op (:send :recv) (:recv :send)))
 
-;; this variable can be added to manually before any threads are
-;; spawned to affect the default set of dynamic variables.
-;; removing *dynamic-variables* itself from the list
-;; will probably not have a desirable effect.
-;; use default-inherit.
-(defvar *dynamic-variables* '(*dynamic-variables* *standard-input* *standard-output*))
+(defun kill (thread)
+  (bt:destroy-thread thread))
 
-;;;
-;;; Processes
-;;;
-(defstruct proc
-  (q      (make-condition-variable)) ; q? What? goddamnit.
-  (woken-p nil	:type boolean)
-  (thread  nil))
-
-(defvar *proc* (make-proc :thread (current-thread))
-  "Bound to the current proc.")
-
-(defmethod print-object ((proc proc) stream)
-  (print-unreadable-object (proc stream :type t :identity t)
-    (format stream "~:[NONE~;~A~]" (proc-thread proc)
-            (when (proc-thread proc) (thread-name (proc-thread proc))))))
-
-(defun kill (proc)
-  (with-lock-held (*chanlock*)
-    (interrupt-thread (proc-thread proc) (lambda () (error 'terminate)))))
-
-;;; inheriting dynamic vars
-(defun add-inherit (vars)
-  (setf *dynamic-variables* (union *dynamic-variables* vars))
-  (dolist (variable *dynamic-variables*)
-    (unless (boundp variable) (proclaim `(special ,variable)) (setf (symbol-value variable) nil))))
-
-(defmacro inherit (vars &rest forms)
-  "During the execution of forms (an implicit progn), newly
-   spawned threads will inherit the dynamic variables listed
-   in vars from their parent"
-  `(if (notevery 'symbolp ,vars)
-       (error "variable names must be symbols")
-       (let ((*dynamic-variables* (union *dynamic-variables* ,vars)))
-         ,@forms)))
-
-;; start a new process to run each form in sequence. gives each new process
-;; its own *proc* definition. proc-thread of the new proc structure is set
-;; by both parent and child, which is redundant, but avoids need for synchronisation
-;; between the two.
 (defmacro spawn (&body body)
   "Spawn a new process to run each form in sequence. If the first item in the macro body
 is a string, and there's more forms to execute, the first item in BODY is used as the
 new thread's name."
   (let* ((thread-name (when (and (stringp (car body)) (cdr body)) (car body)))
          (forms (if thread-name (cdr body) body)))
-    `(let* ((variables *dynamic-variables*)
-            (values (mapcar 'symbol-value variables))
-            (proc (make-proc)))
-       (setf (proc-thread proc)
-             (make-thread (lambda ()
-                            (progv variables values
-                              (setf (proc-thread proc) (current-thread))
-                              (let ((*proc* proc))
-                                (handler-case (progn ,@forms)
-                                  (terminate nil)))))
-                          ,@(when thread-name `(:name ,thread-name))))
-       proc)))
+    `(make-thread (lambda () ,@forms)
+                  ,@(when thread-name `(:name ,thread-name)))))
 
 ;;;
 ;;; Channels
