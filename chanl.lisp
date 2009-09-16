@@ -10,33 +10,19 @@
   (:import-from
    :bordeaux-threads
    #:make-thread
-   #:thread-name
    #:make-lock
-   #:acquire-lock
-   #:release-lock
    #:with-lock-held
    #:make-condition-variable
    #:condition-wait
    #:condition-notify
-   #:current-thread
-   #:interrupt-thread)
+   #:current-thread)
   (:export
-   #:alt
-   #:chan
-   #:chanalt
-   #:channel
-   #:add-inherit
-   #:inherit
-   #:kill
-   #:note
-   #:spawn
-   #:terminate
-   #:send
-   #:!
-   #:recv
-   #:?
-   #:*proc*
-   #:*dynamic-variables*))
+   ;; processes
+   #:spawn #:kill
+   ;; channels
+   #:chan #:send #:recv
+   #:channel #:channel-empty-p #:channel-full-p
+   #:send-blocks-p #:recv-blocks-p))
 
 (in-package :chanl)
 
