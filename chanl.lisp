@@ -67,8 +67,11 @@ new thread's name."
   (:method ((channel channel)) (null (channel-buffer channel))))
 
 (defgeneric channel-full-p (channel)
-  (:method ((channel channel)) (= (channel-buffer-size channel)
-                                  (length (channel-buffer channel)))))
+  (:method ((channel channel)) 
+    (if (zerop (channel-buffer-size channel))
+        (< 0 (length (channel-buffer channel)))
+        (<= (channel-buffer-size channel)
+            (length (channel-buffer channel))))))
 
 (defgeneric send-blocks-p (channel)
   (:method ((channel channel)) (channel-full-p channel)))
@@ -90,8 +93,9 @@ new thread's name."
                (setf buffer (list obj))
                (bt:condition-notify deq-ok))
               (chan-full-p
-               (bt:condition-wait enq-ok lock)
-               (setf buffer (nconc buffer (list obj))))
+               (loop (bt:condition-wait enq-ok lock)
+                  (unless chan-full-p
+                    (return (setf buffer (nconc buffer (list obj)))))))
               (t (setf buffer (nconc buffer (list obj)))))))
     obj))
 
