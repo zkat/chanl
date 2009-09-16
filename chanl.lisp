@@ -38,9 +38,6 @@
 ;;;
 ;;; Threads
 ;;;
-(defun opposite-op (op)
-  (case op (:send :recv) (:recv :send)))
-
 (defun kill (thread)
   (bt:destroy-thread thread))
 
