@@ -3,23 +3,26 @@
 (in-package :chanl)
 
 (defun counter (channel)
-  (loop for i from 2 do (send channel i)))
+  (loop for i from 0 do (send channel i)))
 
 (defun filter (prime in out)
   (loop for i = (recv in)
-     when (mod i prime)
+     when (zerop (mod prime i))
      do (send out i)))
 
+;; I think the reason this works in Newsqueak is that
+;; its prog() operator is FUBAR and doesn't actually create
+;; closures. That seems to be screwing around with this code.
 (defun sieve ()
   (let* ((c (chan))
-         (prime-chan (chan)))
+         (prime-chan (chan 10)))
     (spawn (counter c))
     (spawn (lambda ()
-             (loop
-                (let* ((prime (recv c))
-                       (newc (chan)))
-                  (send prime-chan prime)
-                  (spawn (filter prime c newc))
+             (let (p newc)
+               (loop
+                  (send prime-chan (setf p (recv c)))
+                  (setf newc (chan 10))
+                  (spawn (filter p c newc))
                   (setf c newc)))))
     prime-chan))
 
