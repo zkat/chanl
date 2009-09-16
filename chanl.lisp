@@ -82,15 +82,6 @@
   "Returns a random element from SEQUENCE."
   (elt sequence (random (length sequence))))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defconstant +notes+ nil))
-
-(defmacro note (&rest args)
-  (when +notes+
-    `(let ((string (format nil ,@args)))
-       (format t "~s ~a~%" *proc* string)
-       (force-output))))
-
 ;;;
 ;;; Threads
 ;;;
@@ -112,42 +103,62 @@ new thread's name."
 ;;;
 ;;; Channels
 ;;;
-(defstruct channel
-  (buffer     nil   :type vector)
-  (num-buffered    0    :type fixnum)
-  (off     0    :type fixnum) ; what does this mean?
-  (name    nil   :type (or null string))
-  ;; Perhaps implementing a queue and using its interface would be nicer.
-  (asend   (make-array 0 :fill-pointer 0 :adjustable t))
-  (arecv   (make-array 0 :fill-pointer 0 :adjustable t)))
+(defclass channel ()
+  ((buffer :accessor channel-buffer :initform nil)
+   (buffer-size :accessor channel-buffer-size :initarg :buffer-size)
+   (lock :accessor channel-lock :initform (bt:make-lock))
+   (enq-ok-condition :accessor enq-ok-condition :initform (bt:make-condition-variable))
+   (deq-ok-condition :accessor deq-ok-condition :initform (bt:make-condition-variable))))
+
+(defgeneric channel-empty-p (channel)
+  (:method ((channel channel)) (null (channel-buffer channel))))
+
+(defgeneric channel-enqueue (channel obj)
+  (:method ((channel channel) obj)
+    (with-accessors ((buffer channel-buffer)
+                     (buffer-size channel-buffer-size)
+                     (chan-empty-p channel-empty-p)
+                     (lock channel-lock)
+                     (enq-ok enq-ok-condition))
+        channel
+      (bt:with-lock-held (lock)
+        (cond (chan-empty-p
+               (setf buffer (list obj)))
+              ((<= (1+ buffer-size) (length buffer))
+               (bt:condition-wait enq-ok lock)
+               (setf buffer (nconc buffer (list obj))))
+              (t (setf buffer (nconc buffer (list obj)))))))))
+
+(defgeneric channel-dequeue (channel)
+  (:method ((channel channel))
+    (with-accessors ((buffer channel-buffer)
+                     (chan-empty-p channel-empty-p)
+                     (lock channel-lock)
+                     (enq-ok enq-ok-condition)
+                     (deq-ok deq-ok-condition))
+        channel
+      (bt:with-lock-held (lock)
+        (if chan-empty-p
+            (loop (bt:condition-wait deq-ok lock)
+               (unless chan-empty-p (return (pop buffer))))
+            (pop buffer))))))
 
 (defmethod print-object ((channel channel) stream)
   (print-unreadable-object (channel stream :type t :identity t)
     (format stream "~a" (length (channel-buffer channel)))))
 
-(defun channel-buffer-size (channel)
-  (length (channel-buffer channel)))
-
-(defun chan (&optional (n 0))
+(defun chan (&optional (buffer-size 0))
   "Create a new channel. The optional argument gives the size
    of the channel's buffer (default 0)"
-  (make-channel :buffer (make-array n)))
-
-(defun chanarray (channel op)
-  (case op
-    (:send (channel-asend channel))
-    (:recv (channel-arecv channel))))
+  (make-instance 'channel :buffer-size buffer-size))
 
 (defun recv (channel)
   "Receive a value from the CHANNEL"
-  (let ((alt (make-alt :channel channel :op :recv)))
-    (chanalt (list alt))
-    (alt-value alt)))
+  (channel-dequeue channel))
 
 (defun send (channel value)
   "Send VALUE down CHANNEL"
-  (chanalt (list (make-alt :channel channel :op :send :value value)))
-  value)
+  (channel-enqueue channel value) value)
 
 ;;; These shall remain until I know I can get rid of them.
 (defun ! (channel value)
@@ -155,195 +166,3 @@ new thread's name."
 
 (defun ? (channel)
   (recv channel))
-
-;;;
-;;; Alt
-;;;
-(defstruct alt
-  (channel nil :type (or null channel))
-  value
-  (op     nil    :type symbol)
-  (proc   nil    :type (or null proc))
-  (xalt   nil    :type list) ;; and wtf is this?
-  r ;; and this? Receiver?... WHAT THE FUCK IS IT?!
-  )
-
-(defmethod print-object ((alt alt) stream)
-  (print-unreadable-object (alt stream :type t :identity t)))
-
-(defun execp (alt)
-  "Can ALT execute?"
-  (let ((channel (alt-channel alt))
-        (op (alt-op alt)))
-    (cond
-      ((null channel)
-       nil)
-      ((zerop (channel-buffer-size channel))
-       (plusp (length (chanarray channel (opposite-op op)))))
-      ((eq op :send)
-       (< (channel-num-buffered channel) (channel-buffer-size channel)))
-      ((eq op :recv)
-       (> (channel-num-buffered channel) 0))
-      (t
-       nil))))
-
-(defun enqueue-alt (alt)
-  (vector-push-extend alt (chanarray (alt-channel alt) (alt-op alt))))
-
-(defun dequeue-alt (alt)
-  (let ((chanarray (chanarray (alt-channel alt) (alt-op alt))))
-    (assert (not (null chanarray)))
-    (loop
-       for i below (length chanarray)
-       when (eq (aref chanarray i) alt)
-       do (progn
-            (delarray chanarray i)
-            (return-from dequeue-alt)))
-    (assert nil)))
-
-(defun delarray (array i)
-  (setf (aref array i) (vector-pop array)))
-
-(defun exec-alt (alt)
-  (let ((chanarray (chanarray (alt-channel alt) (opposite-op (alt-op alt)))))
-    (if (plusp (length chanarray))
-        (let ((other (aref chanarray (random (length chanarray)))))
-          (altcopy alt other)
-          (mapc 'dequeue-alt (alt-xalt other))
-          (setf (alt-xalt (car (alt-xalt other))) (list other))
-          (setf (proc-woken-p (alt-proc other)) t)
-          (note "wakeup ~a~%" (alt-proc other))
-          (condition-notify (proc-q (alt-proc other))))
-        (altcopy alt nil))))
-
-;; Actually move the data around.  There are up to three
-;; players: the sender, the receiver, and the channel itself.
-;; If the channel is unbuffered or the buffer is empty,
-;; data goes from sender to receiver.  If the channel is full,
-;; the receiver removes some from the channel and the sender
-;; gets to put some in.
-(defun altcopy (sender receiver)
-  (unless (or sender receiver)
-    (return-from altcopy))
-  (assert (not (null sender)))
-  (let ((channel (alt-channel sender)))
-    (when (eq (alt-op sender) :recv)
-      (psetf sender receiver receiver sender))
-    (assert (or (null sender) (eq (alt-op sender) :send)))
-    (assert (or (null receiver) (eq (alt-op receiver) :recv)))
-    ;; channel is empty (or unbuffered) - copy directly.
-    (when (and (not (null sender)) (not (null receiver)) (zerop (channel-num-buffered channel)))
-      (setf (alt-value receiver) (alt-value sender))
-      (return-from altcopy))
-    ;; otherwise it's always okay to receive and then send.
-    (when (not (null receiver))
-      (setf (alt-value receiver) (aref (channel-buffer channel) (channel-off channel)))
-      (decf (channel-num-buffered channel))
-      (when (eql (incf (channel-off channel)) (channel-buffer-size channel))
-        (setf (channel-off channel) 0)))
-    (when sender
-      (setf (aref (channel-buffer channel)
-                  (mod (+ (channel-off channel) (channel-num-buffered channel))
-                       (channel-buffer-size channel))) (alt-value sender))
-      (incf (channel-num-buffered channel)))))
-
-;; TODO - Fix the mess of locks, and make this shit restart elegantly.
-;; TODO - grok wtf terminate is supposed to do
-(defun chanalt (alts #+nil&aux (canblock t))
-  "Perform one of the operations in the alt structures listed in ALTS.
-   Return the member of ALTS that was
-   activated, or NIL if the operation would have blocked.
-   This is the primitive function used by the alt macro"
-  (mapc (fun (setf (alt-proc _) *proc*
-                   (alt-xalt _) alts))
-        alts)
-  (acquire-lock *chanlock*)
-  ;; execute alt if possible
-  (let ((ncan (count-if #'execp alts)))
-    (when (plusp ncan)
-      (let ((j (random ncan)))
-        (loop for i in alts when (execp i)
-           do (when (zerop j)
-                (unwind-protect (exec-alt i)
-                  (release-lock *chanlock*))
-                (return-from chanalt i))
-             (setf j (1- j))))))
-  #+nil ;; Gotta double-check how canblock actually works.
-  (unless canblock
-    (release-lock *chanlock*)
-    (return-from chanalt nil))
-  (mapc (fun (when (alt-channel _) (enqueue-alt _))) alts)
-  (assert (not (proc-woken-p *proc*)))
-  (loop
-     (note "condition wait")
-     (handler-case (condition-wait (proc-q *proc*) *chanlock*)
-       (terminate ()
-         ;; note that this code runs when *chanlock* has been reacquired
-         (mapc (fun (when (alt-channel _) (enqueue-alt _))) alts)
-         (release-lock *chanlock*)
-         (error 'terminate)))
-     (note "woken")
-     (when (proc-woken-p *proc*)
-       (setf (proc-woken-p *proc*) nil)
-       (let ((r (car (alt-xalt (car alts)))))
-         (release-lock *chanlock*)
-         (return-from chanalt r)))
-     (note "but not actually woken")))
-
-;;; ALT Macro
-(defmacro alt (&body body)
-  "alt ((op) form*)*
-   op ::= (? chan [lambda-list]) | (! chan form) | :*
-   forms -- an implicit progn
-   lambda-list -- a destructuring lambda list
-   chan -- a channel, as returned by (chan)
-
-   Each clause in the alt (except the :* form) represents a channel operation.
-   Initially, all the forms in the send (!) clauses are evaluated;
-   then the alt selects (non deterministically) a
-   clause that is currently executable. If no clause is currently
-   executable, and there is a :* clause, then its forms will
-   be evaluated, otherwise the alt blocks until a clause becomes ready.
-   When a clause becomes ready, its associated forms are evaluated.
-   For a receive (?) clause, the value received on the channel
-   is bound to the values in lambda-list as for destructuring-bind.
-   Alt returns the value of the last form executed."
-  (let ((s1 (gensym))
-        (s2 (gensym))
-        (canblock t) ;hmm...
-        ec) 
-    (let ((a (loop for i in body
-                if (eq (car i) :*)
-                do (setf canblock nil ec (cadr i))
-                else collect (altclause i s2))))
-      (altbody a canblock ec s1))))
-
-(defun altbody (a canblock ec sym)
-  `(let ((,sym (chanalt ,canblock (list ,@a))))
-     ,(if canblock
-          (altinvoke sym)
-          `(if ,sym ,(altinvoke sym) ,ec))))
-
-(defun altinvoke (sym)
-  `(case (alt-op ,sym)
-     (:send (funcall (alt-r ,sym)))
-     (:recv (funcall (alt-r ,sym) (alt-value ,sym)))))
-
-(defun altclause (alt sym)
-  (destructuring-bind ((op channel &optional value) &rest code) alt
-    (setf op (cond ((or (eq op '!) (eq op 'send)) :send)
-                   ((or (eq op '?) (eq op 'recv)) :recv)
-                   (t (error "alt operation must be either ? or !"))))
-    `(make-alt
-      :op ,op
-      :channel ,channel
-      ,@(when (eq op :send) `(:value ,value))
-      :r ,(cond
-           ((eq op :send)
-            `(fun ,@code))
-           ((consp value)
-            `(lambda (,sym) (destructuring-bind ,value ,sym ,@code)))
-           (value
-            `(lambda (,value) ,@code))
-           (t
-            `(lambda (,sym) (declare (ignore ,sym)) ,@code))))))
