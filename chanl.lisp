@@ -123,9 +123,9 @@ new thread's name."
   (make-instance 'channel :buffer-size buffer-size))
 
 ;;;
-;;; Alternation macro
+;;; muxing macro
 ;;;
-(defmacro alt (&body body)
+(defmacro mux (&body body)
   (let ((sends (remove-if-not 'send-clause-p body))
         (recvs (remove-if-not 'recv-clause-p body))
         (else (remove-if-not 'else-clause-p body)))
