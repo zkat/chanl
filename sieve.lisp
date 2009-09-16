@@ -13,14 +13,15 @@
 (defun sieve (prime-channel)
   (let* ((c (chan))
          (counter-proc (spawn (counter c)))
-         p newc)
+         newc)
     (loop
-       (send prime-channel (setf p (recv c)))
-       (setf newc (chan))
-       (spawn (filter p c newc))
-       (setf c newc))))
+       (let ((prime (recv c)))
+         (send prime-channel prime)
+         (setf newc (chan))
+         (spawn (filter prime c newc))
+         (setf c newc)))))
 
 (let* ((prime (chan)))
   (spawn (sieve prime))
-  (loop repeat 100 collect (recv prime)))
+  (loop repeat 10 collect (recv prime)))
 
