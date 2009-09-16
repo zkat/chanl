@@ -47,8 +47,8 @@ is a string, and there's more forms to execute, the first item in BODY is used a
 new thread's name."
   (let* ((thread-name (when (and (stringp (car body)) (cdr body)) (car body)))
          (forms (if thread-name (cdr body) body)))
-    `(make-thread (lambda () ,@forms)
-                  ,@(when thread-name `(:name ,thread-name)))))
+    `(bt:make-thread (lambda () ,@forms)
+                     ,@(when thread-name `(:name ,thread-name)))))
 
 ;;;
 ;;; Channels
