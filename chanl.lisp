@@ -113,18 +113,24 @@ new thread's name."
 (defgeneric channel-empty-p (channel)
   (:method ((channel channel)) (null (channel-buffer channel))))
 
+(defgeneric channel-full-p (channel)
+  (:method ((channel channel)) (= (channel-buffer-size channel)
+                                  (length (channel-buffer channel)))))
+
 (defgeneric channel-enqueue (channel obj)
   (:method ((channel channel) obj)
     (with-accessors ((buffer channel-buffer)
-                     (buffer-size channel-buffer-size)
+                     (chan-full-p channel-full-p)
                      (chan-empty-p channel-empty-p)
                      (lock channel-lock)
-                     (enq-ok enq-ok-condition))
+                     (enq-ok enq-ok-condition)
+                     (deq-ok deq-ok-condition))
         channel
       (bt:with-lock-held (lock)
         (cond (chan-empty-p
-               (setf buffer (list obj)))
-              ((<= (1+ buffer-size) (length buffer))
+               (setf buffer (list obj))
+               (bt:condition-notify deq-ok))
+              (chan-full-p
                (bt:condition-wait enq-ok lock)
                (setf buffer (nconc buffer (list obj))))
               (t (setf buffer (nconc buffer (list obj)))))))))
@@ -132,16 +138,20 @@ new thread's name."
 (defgeneric channel-dequeue (channel)
   (:method ((channel channel))
     (with-accessors ((buffer channel-buffer)
+                     (chan-full-p channel-full-p)
                      (chan-empty-p channel-empty-p)
                      (lock channel-lock)
                      (enq-ok enq-ok-condition)
                      (deq-ok deq-ok-condition))
         channel
       (bt:with-lock-held (lock)
-        (if chan-empty-p
-            (loop (bt:condition-wait deq-ok lock)
-               (unless chan-empty-p (return (pop buffer))))
-            (pop buffer))))))
+        (cond (chan-empty-p
+               (loop (bt:condition-wait deq-ok lock)
+                  (unless chan-empty-p (return (pop buffer)))))
+              (chan-full-p
+               (prog1 (pop buffer)
+                 (bt:condition-notify enq-ok)))
+              (t (pop buffer)))))))
 
 (defmethod print-object ((channel channel) stream)
   (print-unreadable-object (channel stream :type t :identity t)
