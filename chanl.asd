@@ -3,8 +3,9 @@
 (asdf:defsystem chanl
   :name "chanl"
   :maintainer "Josh Marchan"
-  :author "Roger Peppe"
-  :description "Communicating Sequential Process support for Common LISP"
-  :depends-on ("bordeaux-threads")
-  :components ((:file "chanl")))
+  :author "Josh Marchan"
+  :description "Communicating Sequential Process support for Common Lisp"
+  :depends-on (:bordeaux-threads)
+  :components
+  ((:file "chanl")))
 
