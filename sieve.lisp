@@ -10,18 +10,21 @@
      when (mod i prime)
      do (send out i)))
 
-(defun sieve (prime-channel)
+(defun sieve ()
   (let* ((c (chan))
-         (counter-proc (spawn (counter c)))
-         newc)
-    (loop
-       (let ((prime (recv c)))
-         (send prime-channel prime)
-         (setf newc (chan))
-         (spawn (filter prime c newc))
-         (setf c newc)))))
+         (prime-chan (chan)))
+    (spawn (counter c))
+    (spawn (lambda ()
+             (loop
+                (let* ((prime (recv c))
+                       (newc (chan)))
+                  (send prime-chan prime)
+                  (spawn (filter prime c newc))
+                  (setf c newc)))))
+    prime-chan))
 
-(let* ((prime (chan)))
-  (spawn (sieve prime))
-  (loop repeat 10 collect (recv prime)))
+(defun first-n-primes (n)
+  (let* ((prime-chan (sieve)))
+    (loop repeat n collect (recv prime-chan))))
+
 
