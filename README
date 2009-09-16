@@ -1,6 +1,7 @@
-support for CSP-style channels.
+Code this library was originally based on was
 ported from plan9's libthread/channel.c via plan9port
-by roger peppe (rogpeppe@gmail.com).
+by roger peppe (rogpeppe@gmail.com), although basically none
+of that code exists in ChanL anymore.
 
 see http://swtch.com/~rsc/thread/ for a good position paper on
 the CSP paradigm, or http://www.usingcsp.com/cspbook.pdf
@@ -19,14 +20,14 @@ create a buffered channel with a buffer size of 5
 
 read a value from a channel (blocks if channel is empty)
 
-   (? *c*) or (recv *c*)
+   (recv *c*)
 
 write a value to a channel (blocks if channel is full)
 
-   (! *c* 99) or (send *c* 99)
+   (send *c* 99)
 
-wait for any of a number of things to occur:
-   (alt
+wait for any of a number of things to occur (unavailable right now):
+   (mux
        ((? sync)
            (format t "got some value from sync~%"))
        ((? c d)
@@ -39,10 +40,6 @@ wait for any of a number of things to occur:
            (format t "would have blocked~%")))"
 
 create a new process continually reading values and printing them:
-   (spawn (loop (format t "~a~%" (? *c*))))
+   (spawn "Formatter process" (loop (format t "~a~%" (? *c*))))
 
-a couple of initial examples are provided:
-	eval
-		a stub for a multithreaded debugger
-	tk
-		simple threaded graphics with tk.
+See sieve.lisp for an example of a parallel prime sieve
