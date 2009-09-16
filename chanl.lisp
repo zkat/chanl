@@ -315,8 +315,6 @@ new thread's name."
                        (channel-buffer-size channel))) (alt-value sender))
       (incf (channel-num-buffered channel)))))
 
-;; wait for any of the channel operations given in alts to complete.
-;; return the member of alts that completed.
 ;; TODO - Fix the mess of locks, and make this shit restart elegantly.
 ;; TODO - grok wtf terminate is supposed to do
 (defun chanalt (alts #+nil&aux (canblock t))
