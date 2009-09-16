@@ -1,40 +1,9 @@
-;;;; -*- Mode: lisp; indent-tabs-mode: nil -*-
-;; support for CSP-style channels.
-;; ported from plan9's libthread/channel.c via plan9port
-;; by roger peppe (rog@vitanuova.com).
-;;
-;; see http://swtch.com/~rsc/thread/ for a good position paper on
-;; the CSP paradigm, or http://www.usingcsp.com/cspbook.pdf
-;; for some theory.
-;;
-;; e.g.
-;; create a channel:
-;;    (defvar *c* (chan))
-;; create a buffered channel with a buffer size of 5
-;;    (defvar *c* (chan 5))
-;; read a value from a channel (blocks if channel is empty)
-;;    (? *c*)
-;; write a value to a channel (blocks if channel is full)
-;;    (! *c* 99)
-;; wait for any of a number of things to occur:
-;;    (alt
-;;        ((? sync)
-;;            (format t "got some value from sync~%"))
-;;        ((? c d)
-;;            (format t "got ~a from c~%" d))
-;;        ((! e val)
-;;            (format t "sent val on e~%"))
-;;        ((? f (&key arg reply))
-;;            (format t "got arg ~a, reply ~a~% from f" f arg reply))
-;;        (:*
-;;            (format t "would have blocked~%")))"
-;; create a new process continually reading values and printing them:
-;;    (spawn (loop (format t "~a~%" (? *c*))))
-;;
-;; TO DO:
-;; - thread termination (need to unlock *chanlock* correctly).
-;; - default handler for new threads? - wtf?
-;; - Get this to play nice with the condition system
+;;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Base: 10; indent-tabs-mode: nil -*-
+;;;;
+;;;; Copyright © 2009 Josh Marchan
+;;;; 
+;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defpackage :chanl
   (:use :common-lisp)
