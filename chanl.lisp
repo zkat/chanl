@@ -16,7 +16,7 @@
    #:current-thread)
   (:export
    ;; processes
-   #:spawn #:kill
+   #:spawn #:kill #:all-procs
    ;; channels
    #:chan #:send #:recv
    #:channel #:channel-empty-p #:channel-full-p
@@ -49,6 +49,9 @@ new thread's name."
          (forms (if thread-name (cdr body) body)))
     `(bt:make-thread (lambda () ,@forms)
                      ,@(when thread-name `(:name ,thread-name)))))
+
+(defun all-procs ()
+  (bt:all-threads))
 
 ;;;
 ;;; Channels
