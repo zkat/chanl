@@ -117,6 +117,12 @@ new thread's name."
   (:method ((channel channel)) (= (channel-buffer-size channel)
                                   (length (channel-buffer channel)))))
 
+(defgeneric send-blocks-p (channel)
+  (:method ((channel channel)) (channel-full-p channel)))
+
+(defgeneric recv-blocks-p (channel)
+  (:method ((channel channel)) (channel-empty-p channel)))
+
 (defgeneric channel-enqueue (channel obj)
   (:method ((channel channel) obj)
     (with-accessors ((buffer channel-buffer)
