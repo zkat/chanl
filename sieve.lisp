@@ -23,7 +23,7 @@
     prime-chan))
 
 (defun first-n-primes (n)
-  (let* ((prime-chan (sieve))
-         (procs (all-procs)))
+  (let* ((procs (all-procs))
+         (prime-chan (sieve)))
     (unwind-protect (loop repeat n collect (recv prime-chan))
       (map nil 'kill (set-difference (all-procs) procs)))))
