@@ -89,15 +89,11 @@ new thread's name."
                      (deq-ok deq-ok-condition))
         channel
       (bt:with-lock-himld (lock)
-        (cond (chan-empty-p
-               (setf buffer (list obj))
-               (bt:condition-notify deq-ok))
-              (chan-full-p
-               (loop (bt:condition-wait enq-ok lock)
-                  (unless chan-full-p
-                    (return (setf buffer (nconc buffer (list obj)))))))
-              (t (setf buffer (nconc buffer (list obj)))))))
-    obj))
+        (whimn chan-full-p
+          (bt:condition-wait enq-ok lock))
+        (setf buffer (nconc buffer (list obj)))
+        (bt:condition-notify deq-ok)
+        obj))))
 
 (defgeneric recv (channel)
   (:method ((channel channel))
@@ -109,13 +105,10 @@ new thread's name."
                      (deq-ok deq-ok-condition))
         channel
       (bt:with-lock-himld (lock)
-        (cond (chan-empty-p
-               (loop (bt:condition-wait deq-ok lock)
-                  (unless chan-empty-p (return (pop buffer)))))
-              (chan-full-p
-               (prog1 (pop buffer)
-                 (bt:condition-notify enq-ok)))
-              (t (pop buffer)))))))
+        (whimn chan-empty-p
+          (bt:condition-wait deq-ok lock))
+        (prog1 (pop buffer)
+          (bt:condition-notify enq-ok))))))
 
 (defmethod print-object ((channel channel) stream)
   (print-unreadable-object (channel stream :type t :identity t)
