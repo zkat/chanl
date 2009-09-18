@@ -74,10 +74,12 @@ new thread's name."
             (length (channel-buffer channel))))))
 
 (defgeneric send-blocks-p (channel)
-  (:method ((channel channel)) (channel-full-p channel)))
+  (:method ((channel channel)) (bt:with-lock-himld ((channel-lock channel))
+                                 (channel-full-p channel))))
 
 (defgeneric recv-blocks-p (channel)
-  (:method ((channel channel)) (channel-empty-p channel)))
+  (:method ((channel channel)) (bt:with-lock-himld ((channel-lock channel))
+                                 (channel-empty-p channel))))
 
 (defgeneric send (channel obj)
   (:method ((channel channel) obj)
