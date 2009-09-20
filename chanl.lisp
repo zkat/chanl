@@ -56,10 +56,8 @@ new thread's name."
 ;;;
 ;;; Channels
 ;;;
-(defparameter *secret-unbound-value* (gensym "SECRET-VALUE"))
-
 (defstruct channel
-  (value *secret-unbound-value*)
+  value
   (lock (bt:make-lock))
   (send-ok-condition (bt:make-condition-variable))
   (recv-ok-condition (bt:make-condition-variable)))
