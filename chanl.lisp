@@ -56,9 +56,10 @@ new thread's name."
 ;;;
 ;;; Channels
 ;;;
+(defparameter *secret-unbound-value* (gensym "SECRET-VALUE"))
+
 (defstruct channel
-  (buffer nil)
-  (buffer-size 0)
+  (value *secret-unbound-value*)
   (lock (bt:make-lock))
   (send-ok-condition (bt:make-condition-variable))
   (recv-ok-condition (bt:make-condition-variable)))
@@ -68,56 +69,33 @@ new thread's name."
 (defun recv-ok-condition (channel)
   (channel-recv-ok-condition channel))
 
-(defun channel-empty-p (channel)
-  (null (channel-buffer channel)))
-
-(defun channel-full-p (channel)
-  (if (zerop (channel-buffer-size channel))
-      (< 0 (length (channel-buffer channel)))
-      (<= (channel-buffer-size channel)
-          (length (channel-buffer channel)))))
-
-(defun send-blocks-p (channel)
-  (channel-full-p channel))
-
-(defun recv-blocks-p (channel)
-  (channel-empty-p channel))
-
 (defun send (channel obj)
-  (with-accessors ((buffer channel-buffer)
-                   (chan-full-p channel-full-p)
+  (with-accessors ((value channel-value)
                    (lock channel-lock)
                    (send-ok send-ok-condition)
                    (recv-ok recv-ok-condition))
       channel
     (bt:with-lock-held (lock)
-      (when chan-full-p
-        (bt:condition-wait send-ok lock))
-      (setf buffer (nconc buffer (list obj)))
+      (bt:condition-wait send-ok lock)
+      (setf value obj)
       (bt:condition-notify recv-ok)
       obj)))
 
 (defun recv (channel)
-  (with-accessors ((buffer channel-buffer)
-                   (chan-empty-p channel-empty-p)
+  (with-accessors ((value channel-value)
                    (lock channel-lock)
                    (send-ok send-ok-condition)
                    (recv-ok recv-ok-condition))
       channel
     (bt:with-lock-held (lock)
-      (when chan-empty-p
-        (bt:condition-wait recv-ok lock))
-      (prog1 (pop buffer)
-        (bt:condition-notify send-ok)))))
+      (bt:condition-notify send-ok)
+      (bt:condition-wait recv-ok lock)
+       value)))
 
-(defmethod print-object ((channel channel) stream)
-  (print-unreadable-object (channel stream :type t :identity t)
-    (format stream "~A/~A" (length (channel-buffer channel)) (channel-buffer-size channel))))
-
-(defun chan (&optional (buffer-size 0))
+(defun chan ()
   "Create a new channel. The optional argument gives the size
    of the channel's buffer (default 0)"
-  (make-channel :buffer-size buffer-size))
+  (make-channel))
 
 ;;;
 ;;; muxing macro
