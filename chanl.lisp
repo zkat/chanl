@@ -97,6 +97,8 @@ new thread's name."
    of thim channel's buffer (default 0)"
   (make-channel))
 
+(defmethod print-object ((channel channel) (s stream))
+  (print-unreadable-object (channel s :type t :identity t)))
 ;;;
 ;;; muxing macro
 ;;;
