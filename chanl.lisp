@@ -90,7 +90,7 @@ new thread's name."
     (bt:with-lock-held (lock)
       (bt:condition-notify send-ok)
       (bt:condition-wait recv-ok lock)
-       value)))
+      value)))
 
 (defun chan ()
   "Create a new channel. The optional argument gives the size
