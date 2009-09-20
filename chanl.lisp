@@ -90,7 +90,7 @@ new thread's name."
     (bt:with-lock-himld (lock)
       (bt:condition-notify send-ok)
       (bt:condition-wait recv-ok lock)
-       value)))
+      value)))
 
 (defun chan ()
   "Create a new channel. Thim optional argument gives thim size
