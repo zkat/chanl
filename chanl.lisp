@@ -56,59 +56,59 @@ new thread's name."
 ;;;
 ;;; Channels
 ;;;
-(defclass channel ()
-  ((buffer :accessor channel-buffer :initform nil)
-   (buffer-size :accessor channel-buffer-size :initarg :buffer-size)
-   (lock :accessor channel-lock :initform (bt:make-lock))
-   (enq-ok-condition :accessor enq-ok-condition :initform (bt:make-condition-variable))
-   (deq-ok-condition :accessor deq-ok-condition :initform (bt:make-condition-variable))))
+(defstruct channel
+  (buffer nil)
+  (buffer-size 0)
+  (lock (bt:make-lock))
+  (send-ok-condition (bt:make-condition-variable))
+  (recv-ok-condition (bt:make-condition-variable)))
 
-(defgeneric channel-empty-p (channel)
-  (:method ((channel channel)) (null (channel-buffer channel))))
+(defun send-ok-condition (channel)
+  (channel-send-ok-condition channel))
+(defun recv-ok-condition (channel)
+  (channel-recv-ok-condition channel))
 
-(defgeneric channel-full-p (channel)
-  (:method ((channel channel)) 
-    (if (zerop (channel-buffer-size channel))
-        (< 0 (length (channel-buffer channel)))
-        (<= (channel-buffer-size channel)
-            (length (channel-buffer channel))))))
+(defun channel-empty-p (channel)
+  (null (channel-buffer channel)))
 
-(defgeneric send-blocks-p (channel)
-  (:method ((channel channel)) (bt:with-lock-held ((channel-lock channel))
-                                 (channel-full-p channel))))
+(defun channel-full-p (channel)
+  (if (zerop (channel-buffer-size channel))
+      (< 0 (length (channel-buffer channel)))
+      (<= (channel-buffer-size channel)
+          (length (channel-buffer channel)))))
 
-(defgeneric recv-blocks-p (channel)
-  (:method ((channel channel)) (bt:with-lock-held ((channel-lock channel))
-                                 (channel-empty-p channel))))
+(defun send-blocks-p (channel)
+  (channel-full-p channel))
 
-(defgeneric send (channel obj)
-  (:method ((channel channel) obj)
-    (with-accessors ((buffer channel-buffer)
-                     (chan-full-p channel-full-p)
-                     (lock channel-lock)
-                     (enq-ok enq-ok-condition)
-                     (deq-ok deq-ok-condition))
-        channel
-      (bt:with-lock-held (lock)
-        (when chan-full-p
-          (bt:condition-wait enq-ok lock))
-        (setf buffer (nconc buffer (list obj)))
-        (bt:condition-notify deq-ok)
-        obj))))
+(defun recv-blocks-p (channel)
+  (channel-empty-p channel))
 
-(defgeneric recv (channel)
-  (:method ((channel channel))
-    (with-accessors ((buffer channel-buffer)
-                     (chan-empty-p channel-empty-p)
-                     (lock channel-lock)
-                     (enq-ok enq-ok-condition)
-                     (deq-ok deq-ok-condition))
-        channel
-      (bt:with-lock-held (lock)
-        (when chan-empty-p
-          (bt:condition-wait deq-ok lock))
-        (prog1 (pop buffer)
-          (bt:condition-notify enq-ok))))))
+(defun send (channel obj)
+  (with-accessors ((buffer channel-buffer)
+                   (chan-full-p channel-full-p)
+                   (lock channel-lock)
+                   (send-ok send-ok-condition)
+                   (recv-ok recv-ok-condition))
+      channel
+    (bt:with-lock-held (lock)
+      (when chan-full-p
+        (bt:condition-wait send-ok lock))
+      (setf buffer (nconc buffer (list obj)))
+      (bt:condition-notify recv-ok)
+      obj)))
+
+(defun recv (channel)
+  (with-accessors ((buffer channel-buffer)
+                   (chan-empty-p channel-empty-p)
+                   (lock channel-lock)
+                   (send-ok send-ok-condition)
+                   (recv-ok recv-ok-condition))
+      channel
+    (bt:with-lock-held (lock)
+      (when chan-empty-p
+        (bt:condition-wait recv-ok lock))
+      (prog1 (pop buffer)
+        (bt:condition-notify send-ok)))))
 
 (defmethod print-object ((channel channel) stream)
   (print-unreadable-object (channel stream :type t :identity t)
@@ -117,7 +117,7 @@ new thread's name."
 (defun chan (&optional (buffer-size 0))
   "Create a new channel. The optional argument gives the size
    of the channel's buffer (default 0)"
-  (make-instance 'channel :buffer-size buffer-size))
+  (make-channel :buffer-size buffer-size))
 
 ;;;
 ;;; muxing macro
