@@ -56,8 +56,11 @@ new thread's name."
 ;;;
 ;;; Channels
 ;;;
-(defstruct channel
-  value
+(defparameter *secret-unbound-value* (gensym "SEKRIT"))
+
+(defstruct (channel (:constructor chan))
+  (value *secret-unbound-value*)
+  being-read-p
   (lock (bt:make-lock))
   (send-ok-condition (bt:make-condition-variable))
   (recv-ok-condition (bt:make-condition-variable)))
@@ -67,33 +70,42 @@ new thread's name."
 (defun recv-ok-condition (channel)
   (channel-recv-ok-condition channel))
 
+;; <pkhuong> zkat: you'll need two sentinels, since your channels are synchronous. One for a
+;;     channel that's ready to receive a value, and another for a channel that's been read, but
+;;     whose writer hasn't been notified yet.
+;; I DON'T GET IT
 (defun send (channel obj)
   (with-accessors ((value channel-value)
+                   (being-read-p channel-being-read-p)
                    (lock channel-lock)
                    (send-ok send-ok-condition)
                    (recv-ok recv-ok-condition))
       channel
     (bt:with-lock-held (lock)
-      (bt:condition-wait send-ok lock)
-      (setf value obj)
+      (loop
+         until (and (eq value *secret-unbound-value*)
+                    being-read-p)
+         do (bt:condition-wait send-ok lock)
+         finally (setf being-read-p nil) (return (setf value obj)))
       (bt:condition-notify recv-ok)
       obj)))
 
 (defun recv (channel)
   (with-accessors ((value channel-value)
+                   (being-read-p channel-being-read-p)
                    (lock channel-lock)
                    (send-ok send-ok-condition)
                    (recv-ok recv-ok-condition))
       channel
     (bt:with-lock-held (lock)
-      (bt:condition-notify send-ok)
-      (bt:condition-wait recv-ok lock)
-      value)))
-
-(defun chan ()
-  "Create a new channel. The optional argument gives the size
-   of the channel's buffer (default 0)"
-  (make-channel))
+      (prog1
+          (loop
+             while (or (eq *secret-unbound-value* value)
+                       being-read-p)
+             do (bt:condition-wait recv-ok lock)
+             finally (setf value *secret-unbound-value*) (return value))
+        (bt:condition-notify send-ok)
+        (setf read-already t)))))
 
 (defmethod print-object ((channel channel) (s stream))
   (print-unreadable-object (channel s :type t :identity t)))
