@@ -103,8 +103,9 @@ new thread's name."
         (setf value           *secret-unbound-value*
               being-read-p    nil)))))
 
-(defmethod print-object ((channel channel) (s stream))
-  (print-unreadable-object (channel s :type t :identity t)))
+(defmethod print-object ((channel channel) stream)
+  (print-unreadable-object (channel stream :type t :identity t)))
+
 ;;;
 ;;; muxing macro
 ;;;
