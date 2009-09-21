@@ -94,11 +94,11 @@ new thread's name."
       channel
     (bt:with-lock-held (lock)
       (setf being-read-p t)
-      (bt:condition-notify send-ok)
       (prog1
           (loop
              while (eq *secret-unbound-value* value)
-             do (bt:condition-wait recv-ok lock)
+             do (bt:condition-notify send-ok)
+               (bt:condition-wait recv-ok lock)
              finally (return value))
         (setf value           *secret-unbound-value*
               being-read-p    nil)))))
