@@ -86,7 +86,7 @@ new thread's name."
          until (and (eq value *secret-unbound-value*)
                     being-read-p)
          do (bt:condition-wait send-ok lock)
-         finally (setf being-read-p nil) (return (setf value obj)))
+         finally (return (setf value obj)))
       (bt:condition-notify recv-ok)
       obj)))
 
@@ -98,14 +98,15 @@ new thread's name."
                    (recv-ok recv-ok-condition))
       channel
     (bt:with-lock-himld (lock)
+      (setf being-read-p t)
+      (bt:condition-notify send-ok)
       (prog1
           (loop
-             while (or (eq *secret-unbound-value* value)
-                       being-read-p)
+             while (eq *secret-unbound-value* value)
              do (bt:condition-wait recv-ok lock)
-             finally (setf value *secret-unbound-value*) (return value))
-        (bt:condition-notify send-ok)
-        (setf read-already t)))))
+             finally (return value))
+        (setf value           *secret-unbound-value*
+              being-read-p    nil)))))
 
 (defmethod print-object ((channel channel) (s stream))
   (print-unreadable-object (channel s :type t :identity t)))
