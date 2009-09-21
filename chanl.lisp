@@ -65,11 +65,6 @@ new thread's name."
   (send-ok-condition (bt:make-condition-variable))
   (recv-ok-condition (bt:make-condition-variable)))
 
-(defun send-ok-condition (channel)
-  (channel-send-ok-condition channel))
-(defun recv-ok-condition (channel)
-  (channel-recv-ok-condition channel))
-
 ;; <pkhuong> sykopomp: you'll need two sentinels, since your channels are synchronous. One for a
 ;;     channel that's ready to receive a value, and another for a channel that's been read, but
 ;;     whose writer hasn't been notified yet.
@@ -78,8 +73,8 @@ new thread's name."
   (with-accessors ((value channel-value)
                    (being-read-p channel-being-read-p)
                    (lock channel-lock)
-                   (send-ok send-ok-condition)
-                   (recv-ok recv-ok-condition))
+                   (send-ok channel-send-ok-condition)
+                   (recv-ok channel-recv-ok-condition))
       channel
     (bt:with-lock-held (lock)
       (loop
@@ -94,8 +89,8 @@ new thread's name."
   (with-accessors ((value channel-value)
                    (being-read-p channel-being-read-p)
                    (lock channel-lock)
-                   (send-ok send-ok-condition)
-                   (recv-ok recv-ok-condition))
+                   (send-ok channel-send-ok-condition)
+                   (recv-ok channel-recv-ok-condition))
       channel
     (bt:with-lock-held (lock)
       (setf being-read-p t)
