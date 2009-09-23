@@ -65,6 +65,13 @@ new thread's name."
   (send-ok-condition (bt:make-condition-variable))
   (recv-ok-condition (bt:make-condition-variable)))
 
+;; TODO - this whole thing locks up regularly on CCL and I have no idea why.
+;;        as far as I can tell, I think I'm using this stuff right, and when
+;;        I read through it, I don't see any reason for a deadlock to happen.
+;;        At least no obvious reason. I really don't want to have to read
+;;        all of art of multiproc programming just to figure out this one
+;;        retarded thing.
+;;        At least it works on SBCL :( -- zkat
 (defun send (channel obj)
   (with-accessors ((value channel-value)
                    (being-read-p channel-being-read-p)
@@ -74,10 +81,9 @@ new thread's name."
       channel
     (bt:with-lock-held (lock)
       (loop
-         until (and (eq value *secret-unbound-value*)
-                    being-read-p)
-         do (bt:condition-wait send-ok lock)
-         finally (return (setf value obj)))
+         until (and being-read-p (eq value *secret-unbound-value*))
+         do (bt:condition-wait send-ok lock))
+      (setf value obj)
       (bt:condition-notify recv-ok)
       obj)))
 
@@ -89,13 +95,18 @@ new thread's name."
                    (recv-ok channel-recv-ok-condition))
       channel
     (bt:with-lock-held (lock)
+      ;; Begin ANSI-non-compliant code.
+      ;; Please refer to http://www.lispworks.com/documentation/HyperSpec/Body/m_prog1c.htm
+      ;; for further details on this incompatibility, and refer to your implementation's
+      ;; documentation to determine whether this will cause breakage.
+      ;; -- zkat
       (setf being-read-p t)
-      (prog1
-          (loop
-             while (eq *secret-unbound-value* value)
-             do (bt:condition-notify send-ok)
-               (bt:condition-wait recv-ok lock)
-             finally (return value))
+      (bt:condition-notify send-ok)
+      (prog2 (loop
+                while (eq *secret-unbound-value* value)
+                do (bt:condition-wait recv-ok lock))
+          value
+        ;; End ANSI-non-compliant code.
         (setf value           *secret-unbound-value*
               being-read-p    nil)))))
 
@@ -105,6 +116,10 @@ new thread's name."
 ;;;
 ;;; muxing macro
 ;;;
+;; TODO - write this out. It should turn each clause into an actual object that can then be
+;;        iterated over. I first need to figure out how to check whether send/recv would block.
+;;        That should be easy enough, though. Maybe it'll help me figure out the CCL annoyance.
+;;        -- zkat
 (defmacro mux (&body body)
   (let ((sends (remove-if-not 'send-clause-p body))
         (recvs (remove-if-not 'recv-clause-p body))
