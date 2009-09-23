@@ -95,13 +95,13 @@ new thread's name."
                    (recv-ok channel-recv-ok-condition))
       channel
     (bt:with-lock-held (lock)
+      (setf being-read-p t)
+      (bt:condition-notify send-ok)
       ;; Begin ANSI-non-compliant code.
       ;; Please refer to http://www.lispworks.com/documentation/HyperSpec/Body/m_prog1c.htm
       ;; for further details on this incompatibility, and refer to your implementation's
       ;; documentation to determine whether this will cause breakage.
       ;; -- sykopomp
-      (setf being-read-p t)
-      (bt:condition-notify send-ok)
       (prog2 (loop
                 while (eq *secret-unbound-value* value)
                 do (bt:condition-wait recv-ok lock))
