@@ -25,9 +25,8 @@
                 (format t "SIEVE: Received ~A from ~A~%" prime c)
                 (format t "SIEVE: Sending ~A down prime-chan.~%" prime)
                 (send prime-chan prime)
-                (format t "SIEVE: Sent ~A down prime-chan~%" prime)
-                (spawn (filter prime c newc))
-                (format t "SIEVE: Spawned new FILTER process, going from ~A to ~A~%" c newc)
+                (let ((c* c))
+                  (spawn (filter prime c* newc)))
                 (setf c newc))))
     prime-chan))
 
