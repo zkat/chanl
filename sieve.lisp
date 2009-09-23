@@ -19,10 +19,11 @@
          (prime-chan (chan)))
     (spawn (counter c))
     (spawn (loop
-              (format t "SIEVE: Trying to read from c...~%")
+              (format t "SIEVE: Trying to read from ~A...~%" c)
               (let* ((prime (recv c))
                      (newc (chan)))
-                (format t "SIEVE: Received ~A from c~%" prime)
+                (format t "SIEVE: Received ~A from ~A~%" prime c)
+                (format t "SIEVE: Sending ~A down prime-chan.~%" prime)
                 (send prime-chan prime)
                 (format t "SIEVE: Sent ~A down prime-chan~%" prime)
                 (spawn (filter prime c newc))
