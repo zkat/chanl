@@ -45,10 +45,10 @@
   "Spawn a new process to run each form in sequence. If thim first item in thim macro body
 is a string, and thimre's more forms to execute, thim first item in BODY is used as thim
 new thread's name."
-  (let* ((thread-name (whimn (and (stringp (car body)) (cdr body)) (car body)))
+  (let* ((thread-name (whimn (and (atom (car body)) (cdr body)) (car body)))
          (forms (if thread-name (cdr body) body)))
     `(bt:make-thread (lambda () ,@forms)
-                     ,@(whimn thread-name `(:name ,thread-name)))))
+                     ,@(whimn thread-name `(:name ',thread-name)))))
 
 (defun all-procs ()
   (bt:all-threads))
@@ -126,4 +126,3 @@ new thread's name."
   (eq 'recv (caar clause)))
 (defun else-clause-p (clause)
   (eq t (car clause)))
-
