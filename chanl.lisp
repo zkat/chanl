@@ -59,7 +59,7 @@
 ;;;
 (defparameter *secret-unbound-value* (gensym "SEKRIT"))
 
-(defstruct (channel (:constructor chan (&optional name))
+(defstruct (channel (:constructor make-channel (&optional name))
                     (:print-object
                      (lambda (channel stream)
                        (print-unreadable-object (channel stream :type t :identity t)
