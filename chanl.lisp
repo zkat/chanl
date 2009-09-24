@@ -96,7 +96,7 @@
       channel
     (bt:with-lock-held (lock)
       (loop
-         while (and chan-full-p (not being-read-p))
+         while chan-full-p
          do (bt:condition-wait send-ok lock)
          finally (push obj buffer))
       (bt:condition-notify recv-ok)
