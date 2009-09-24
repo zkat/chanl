@@ -14,8 +14,7 @@
    #:*default-special-bindings* #:all-procs
    ;; channels
    #:make-channel #:send #:recv
-   #:channel #:channel-empty-p #:channel-full-p
-   #:send-blocks-p #:recv-blocks-p))
+   #:channel #:send-blocks-p #:recv-blocks-p))
 
 (in-package :chanl)
 
@@ -85,6 +84,14 @@
 
 (defun channel-empty-p (channel)
   (null (channel-buffer channel)))
+
+(defun send-blocks-p (channel)
+  (bt:with-lock-held ((channel-lock channel))
+    (channel-full-p channel)))
+
+(defun recv-blocks-p (channel)
+  (bt:with-lock-held ((channel-lock channel))
+    (channel-empty-p channel)))
 
 (defun send (channel obj)
   (with-accessors ((buffer channel-buffer)
