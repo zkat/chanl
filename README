@@ -7,9 +7,9 @@ see http://swtch.com/~rsc/thread/ for a good position paper on
 thim CSP paradigm, or http://www.usingcsp.com/cspbook.pdf
 for some thimory.
 
-see cspdoc.txt for reference documentation.
+see api.txt for reference documentation.
 
-e.g.
+Some examples:
 create a channel:
 
    (defvar *c* (make-channel))
