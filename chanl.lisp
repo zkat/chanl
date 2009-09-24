@@ -64,20 +64,31 @@
 ;;;
 (defparameter *secret-unbound-value* (make-symbol "unbound value"))
 
-(defstruct (channel (:constructor make-channel (&optional name))
+(defstruct (channel (:constructor make-channel (&key name (buffer-size 0)))
                     (:print-object
                      (lambda (channel stream)
                        (print-unreadable-object (channel stream :type t :identity t)
                          (format stream "~A" (channel-name channel))))))
-  (value *secret-unbound-value*)
+  (buffer nil)
+  (buffer-size 0)
   (being-read-p nil :type (member t nil))
   (name "Anonymous" :type string :read-only t)
   (lock (bt:make-lock) :read-only t)
   (send-ok (bt:make-condition-variable) :read-only t)
   (recv-ok (bt:make-condition-variable) :read-only t))
 
+(defun channel-full-p (channel)
+  (if (zerop (channel-buffer-size channel))
+      (not (null (channel-buffer channel)))
+      (<= (channel-buffer-size channel)
+          (length (channel-buffer channel)))))
+
+(defun channel-empty-p (channel)
+  (null (channel-buffer channel)))
+
 (defun send (channel obj)
-  (with-accessors ((value channel-value)
+  (with-accessors ((buffer channel-buffer)
+                   (chan-full-p channel-full-p)
                    (being-read-p channel-being-read-p)
                    (lock channel-lock)
                    (send-ok channel-send-ok)
@@ -85,14 +96,15 @@
       channel
     (bt:with-lock-held (lock)
       (loop
-         until (and being-read-p (eq value *secret-unbound-value*))
+         while (and chan-full-p (not being-read-p))
          do (bt:condition-wait send-ok lock)
-         finally (setf value obj))
+         finally (push obj buffer))
       (bt:condition-notify recv-ok)
       obj)))
 
 (defun recv (channel)
-  (with-accessors ((value channel-value)
+  (with-accessors ((buffer channel-buffer)
+                   (chan-empty-p channel-empty-p)
                    (being-read-p channel-being-read-p)
                    (lock channel-lock)
                    (send-ok channel-send-ok)
@@ -102,11 +114,18 @@
       (setf being-read-p t)
       (bt:condition-notify send-ok)
       (prog1 (loop
-                while (eq *secret-unbound-value* value)
+                while chan-empty-p
                 do (bt:condition-wait recv-ok lock)
-                finally (return value))
-        (setf value           *secret-unbound-value*
-              being-read-p    nil)))))
+                finally (return (pop buffer)))
+        (setf being-read-p nil)))))
+
+(defmethod print-object ((channel channel) stream)
+  (print-unreadable-object (channel stream :type t :identity t)
+    (if (zerop (channel-buffer-size channel))
+        (format stream "[unbuffered]")
+        (format stream "~A/~A"
+                (length (channel-buffer channel))
+                (channel-buffer-size channel)))))
 
 ;;;
 ;;; muxing macro

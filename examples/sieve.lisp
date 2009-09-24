@@ -33,12 +33,12 @@
      do (send out i)))
 
 (defun sieve (output-channel)
-  (let ((input-channel (make-channel "1")))
+  (let ((input-channel (make-channel :name "1")))
     (proc-exec (:name "Counter") (counter input-channel))
     (proc-exec (:name "Sieve")
       (labels ((next-prime (input-channel)
                  (let* ((prime (recv input-channel))
-                        (new-input (make-channel (format nil "~D" prime))))
+                        (new-input (make-channel :name (format nil "~D" prime))))
                    (send output-channel prime)
                    (proc-exec (:name (format nil "Filter ~D" prime))
                      (filter prime input-channel new-input))
@@ -47,7 +47,7 @@
     output-channel))
 
 (defun first-n-primes (n)
-  (let ((prime-channel (make-channel "Prime output channel")))
+  (let ((prime-channel (make-channel :name "Prime output channel")))
     (cleanup-leftovers
       (sieve prime-channel)
       (loop repeat n collect (recv prime-channel)))))
