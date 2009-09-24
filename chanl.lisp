@@ -18,6 +18,7 @@
   (:export
    ;; processes
    #:proc-call #:proc-exec #:kill-proc #:current-proc
+   #:proc-alive-p #:procp #:proc-name
    #:*default-special-bindings* #:all-procs
    ;; channels
    #:chan #:send #:recv
@@ -42,6 +43,15 @@
 ;;;
 (defun current-proc ()
   (bt:current-thread))
+
+(defun proc-alive-p (proc)
+  (bt:thread-alive-p proc))
+
+(defun procp (proc)
+  (bt:threadp proc))
+
+(defun proc-name (proc)
+  (bt:thread-name proc))
 
 (defun kill-proc (thread)
   (bt:destroy-thread thread))
