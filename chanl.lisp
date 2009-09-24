@@ -70,6 +70,7 @@
                          (format stream "~A" (channel-name channel))))))
   (buffer nil)
   (buffer-size 0)
+  last-cons
   (being-read-p nil :type (member t nil))
   (name "Anonymous" :type string :read-only t)
   (lock (bt:make-lock) :read-only t)
@@ -95,6 +96,7 @@
 
 (defun send (channel obj)
   (with-accessors ((buffer channel-buffer)
+                   (last-cons channel-last-cons)
                    (chan-full-p channel-full-p)
                    (being-read-p channel-being-read-p)
                    (lock channel-lock)
@@ -105,12 +107,18 @@
       (loop
          while (and chan-full-p (not being-read-p))
          do (bt:condition-wait send-ok lock)
-         finally (setf buffer (nconc buffer (list obj))))
+         finally (let ((cons (list obj)))
+                   (if buffer
+                       (setf (cdr last-cons) cons
+                             last-cons cons)
+                       (setf buffer cons
+                             last-cons cons))))
       (bt:condition-notify recv-ok)
       obj)))
 
 (defun recv (channel)
   (with-accessors ((buffer channel-buffer)
+                   (last-cons channel-last-cons)
                    (chan-empty-p channel-empty-p)
                    (being-read-p channel-being-read-p)
                    (lock channel-lock)
@@ -123,7 +131,8 @@
       (prog1 (loop
                 while chan-empty-p
                 do (bt:condition-wait recv-ok lock)
-                finally (return (pop buffer)))
+                finally (return (prog1 (pop buffer)
+                                  (unless buffer (setf last-cons nil)))))
         (setf being-read-p nil)))))
 
 (defmethod print-object ((channel channel) stream)
