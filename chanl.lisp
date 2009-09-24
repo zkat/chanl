@@ -123,7 +123,7 @@
   (print-unreadable-object (channel stream :type t :identity t)
     (if (zerop (channel-buffer-size channel))
         (format stream "[unbuffered]")
-        (format stream "~A/~A"
+        (format stream "[~A/~A]"
                 (length (channel-buffer channel))
                 (channel-buffer-size channel)))))
 
