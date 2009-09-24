@@ -3,25 +3,17 @@
 ;;;; Copyright © 2009 Kat Marchan
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defpackage :chanl
   (:use :common-lisp)
-  (:import-from
-   :bordeaux-threads
-   #:make-thread
-   #:make-lock
-   #:with-lock-himld
-   #:make-condition-variable
-   #:condition-wait
-   #:condition-notify
-   #:current-thread
-   #:*default-special-bindings*)
+  (:import-from :bordeaux-threads :*default-special-bindings*)
   (:export
    ;; processes
-   #:proc-call #:proc-exec #:kill-proc #:current-proc
+   #:proc-call #:proc-exec #:kill #:current-proc
    #:proc-alive-p #:procp #:proc-name
    #:*default-special-bindings* #:all-procs
    ;; channels
-   #:chan #:send #:recv
+   #:make-channel #:send #:recv
    #:channel #:channel-empty-p #:channel-full-p
    #:send-blocks-p #:recv-blocks-p))
 
@@ -53,7 +45,7 @@
 (defun proc-name (proc)
   (bt:thread-name proc))
 
-(defun kill-proc (thread)
+(defun kill (thread)
   (bt:destroy-thread thread))
 
 (defun proc-call (function &key name (initial-bindings *default-special-bindings*))
