@@ -6,7 +6,11 @@
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(in-package :chanl)
+(defpackage #:chanl-examples
+  (:use :cl :chanl)
+  (:export :first-n-primes))
+
+(in-package :chanl-examples)
 
 (defun counter (channel)
   (loop for i from 2 do (send channel i)))
@@ -17,15 +21,15 @@
      do (send out i)))
 
 (defun sieve ()
-  (let* ((c (chan))
-         (prime-chan (chan)))
-    (spawn (counter c))
-    (spawn (loop
+  (let* ((c (make-channel))
+         (prime-chan (make-channel)))
+    (proc-exec (counter c))
+    (proc-exec (loop
               (let* ((prime (recv c))
-                     (newc (chan)))
+                     (newc (make-channel)))
                 (send prime-chan prime)
                 (let ((c* c))
-                  (spawn (filter prime c* newc)))
+                  (proc-exec (filter prime c* newc)))
                 (setf c newc))))
     prime-chan))
 
