@@ -70,25 +70,26 @@
 ;;;
 ;;; Channels
 ;;;
-(defparameter *secret-unbound-value* (gensym "SEKRIT"))
+(defparameter *secret-unbound-value* (make-symbol "unbound value"))
 
 (defstruct (channel (:constructor make-channel (&optional name))
                     (:print-object
                      (lambda (channel stream)
                        (print-unreadable-object (channel stream :type t :identity t)
-                         (format stream "~:[Anonymous~;~:*~A~]" (channel-name channel))))))
+                         (format stream "~A" (channel-name channel))))))
   (value *secret-unbound-value*)
-  being-read-p name
-  (lock (bt:make-lock))
-  (send-ok-condition (bt:make-condition-variable))
-  (recv-ok-condition (bt:make-condition-variable)))
+  (being-read-p nil :type (member t nil))
+  (name "Anonymous" :type string :read-only t)
+  (lock (bt:make-lock) :read-only t)
+  (send-ok (bt:make-condition-variable) :read-only t)
+  (recv-ok (bt:make-condition-variable) :read-only t))
 
 (defun send (channel obj)
   (with-accessors ((value channel-value)
                    (being-read-p channel-being-read-p)
                    (lock channel-lock)
-                   (send-ok channel-send-ok-condition)
-                   (recv-ok channel-recv-ok-condition))
+                   (send-ok channel-send-ok)
+                   (recv-ok channel-recv-ok))
       channel
     (bt:with-lock-held (lock)
       (loop
@@ -102,8 +103,8 @@
   (with-accessors ((value channel-value)
                    (being-read-p channel-being-read-p)
                    (lock channel-lock)
-                   (send-ok channel-send-ok-condition)
-                   (recv-ok channel-recv-ok-condition))
+                   (send-ok channel-send-ok)
+                   (recv-ok channel-recv-ok))
       channel
     (bt:with-lock-held (lock)
       (setf being-read-p t)
