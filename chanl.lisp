@@ -17,7 +17,7 @@
    #:*default-special-bindings*)
   (:export
    ;; processes
-   #:proc-call #:proc-exec #:proc-kill 
+   #:proc-call #:proc-exec #:kill-proc #:current-proc
    #:*default-special-bindings* #:all-procs
    ;; channels
    #:chan #:send #:recv
@@ -40,7 +40,10 @@
 ;;;
 ;;; Threads
 ;;;
-(defun kill (thread)
+(defun current-proc ()
+  (bt:current-thread))
+
+(defun kill-proc (thread)
   (bt:destroy-thread thread))
 
 (defun proc-call (function &key name (initial-bindings *default-special-bindings*))
