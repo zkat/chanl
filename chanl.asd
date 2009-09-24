@@ -9,3 +9,12 @@
   :components
   ((:file "chanl")))
 
+(asdf:defsystem chanl-examples
+  :name "chanl examples"
+  :maintainer "Adlai Chandrasekhar"
+  :author "Josh Marchan"
+  :description "Examples of how to use chanl"
+  :depends-on (:chanl)
+  :components ((:module "examples"
+                        :components ((:file "sieve")))))
+
