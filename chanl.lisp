@@ -98,7 +98,7 @@
       (loop
          while (and chan-full-p (not being-read-p))
          do (bt:condition-wait send-ok lock)
-         finally (push obj buffer))
+         finally (setf buffer (nconc buffer (list obj))))
       (bt:condition-notify recv-ok)
       obj)))
 
