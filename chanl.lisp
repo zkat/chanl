@@ -13,10 +13,12 @@
    #:make-condition-variable
    #:condition-wait
    #:condition-notify
-   #:current-thread)
+   #:current-thread
+   #:*default-special-bindings*)
   (:export
    ;; processes
-   #:spawn #:kill #:all-procs
+   #:proc-call #:proc-exec #:proc-kill 
+   #:*default-special-bindings* #:all-procs
    ;; channels
    #:chan #:send #:recv
    #:channel #:channel-empty-p #:channel-full-p
@@ -41,14 +43,13 @@
 (defun kill (thread)
   (bt:destroy-thread thread))
 
-(defmacro spawn (&body body)
-  "Spawn a new process to run each form in sequence. If the first item in the macro body
-is a string, and there's more forms to execute, the first item in BODY is used as the
-new thread's name."
-  (let* ((thread-name (when (and (atom (car body)) (cdr body)) (car body)))
-         (forms (if thread-name (cdr body) body)))
-    `(bt:make-thread (lambda () ,@forms)
-                     ,@(when thread-name `(:name ',thread-name)))))
+(defun proc-call (function &key name (initial-bindings *default-special-bindings*))
+  (bt:make-thread function :name name :initian-bindings initial-bindings))
+
+(defmacro proc-exec ((&key name initial-bindings) &body body)
+  `(proc-call (lambda () ,@body)
+              ,@(when name `(:name ,name))
+              ,@(when initial-bindings `(:initial-bindings ,initial-bindings))))
 
 (defun all-procs ()
   (bt:all-threads))
