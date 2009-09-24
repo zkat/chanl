@@ -44,7 +44,7 @@
   (bt:destroy-thread thread))
 
 (defun proc-call (function &key name (initial-bindings *default-special-bindings*))
-  (bt:make-thread function :name name :initian-bindings initial-bindings))
+  (bt:make-thread function :name name :initial-bindings initial-bindings))
 
 (defmacro proc-exec ((&key name initial-bindings) &body body)
   `(proc-call (lambda () ,@body)
