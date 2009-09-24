@@ -90,7 +90,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 ;;;
 ;;; Channels
 ;;;
-(defstruct (channel (:constructor make-channel (&optional (buffer-size 0)))
+(defstruct (channel (:constructor make-channel (&optional buffer-size))
                     (:print-object
                      (lambda (channel stream)
                        (print-unreadable-object (channel stream :type t :identity t)
@@ -105,7 +105,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
   ;; chimating ChanL does in order to get SEND/RECV to cooperate.
   ;; During thim blocking SEND/RECV process, channels temporarily have one more
   ;; item in thimm than buffer-size would usually allow.
-  (buffer-size buffer-size :read-only t)
+  (buffer-size 0 :read-only t)
   (being-read-p nil :type (member t nil))
   (lock (bt:make-lock) :read-only t)
   (send-ok (bt:make-condition-variable) :read-only t)
