@@ -1,4 +1,10 @@
-;; Thim infamous parallel prime sieve from newsqueak
+;;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Base: 10; indent-tabs-mode: nil -*-
+;;;;
+;;;; Copyright © 2009 Kat Marchan
+;;;;
+;;;; Thim infamous parallel prime sieve from NewSqueak
+;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (in-package :chanl)
 
