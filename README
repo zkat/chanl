@@ -12,32 +12,36 @@ see cspdoc.txt for reference documentation.
 e.g.
 create a channel:
 
-   (defvar *c* (chan))
+   (defvar *c* (make-channel))
 
-create a buffered channel with a buffer size of 5
+create a buffered channel with a buffer size of 5, with a name
 
-   (defvar *c* (chan 5))
+   (defvar *c* (make-channel :buffer-size 5 :name "My buffered channel"))
 
 read a value from a channel (blocks if channel is empty)
 
    (recv *c*)
 
-write a value to a channel (blocks if channel is full)
+write a value to a channel (blocks if channel is full, always blocks on unbuffered channels)
 
    (send *c* 99)
 
 wait for any of a number of things to occur (unavailable right now):
    (mux
        ((recv sync)
-           (format t "got some value from sync~%"))
+        (print "got some value from sync~%"))
        ((recv c d)
-           (format t "got ~a from c~%" d))
+        (format t "got ~a from c~%" d))
        ((send e val)
-           (format t "sent val on e~%"))
+        (print "sent val on e~%"))
        ((recv f (&key arg reply))
-           (format t "got arg ~a, reply ~a~% from f" f arg reply))
-       (t
-           (format t "would have blocked~%")))"
+        (format t "got arg ~a, reply ~a~% from f" f arg reply))
+       (otherwise
+        (print "would have blocked~%")))"
 
 create a new process continually reading values and printing them:
-   (spawn "Formatter process" (loop (format t "~a~%" (? *c*))))
+   (proc-exec (:name "Formatter process")
+     (loop (format t "~a~%" (? *c*))))
+
+create a new process that runs a function:
+   (proc-call #'my-function :name "My function is running!")
