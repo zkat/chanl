@@ -66,8 +66,6 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 ;;;
 ;;; Channels
 ;;;
-(defparameter *secret-unbound-value* (make-symbol "unbound value"))
-
 (defstruct (channel (:constructor make-channel (&key name (buffer-size 0)))
                     (:print-object
                      (lambda (channel stream)
