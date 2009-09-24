@@ -1,0 +1,26 @@
+;;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Base: 10; indent-tabs-mode: nil -*-
+;;;;
+;;;; Copyright © 2009 Josh Marchan
+;;;;
+;;;; Example utilities for use with ChanL
+;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(in-package :chanl-examples)
+
+(defmacro cleanup-leftovers (&body body)
+  "Evaluate the forms in BODY, then kill any procs which have been created in the meantime.
+NOTE: This will also kill procs spawned from other threads."
+  (let ((procs (gensym)))
+    `(let ((,procs (all-procs)))
+       (unwind-protect (progn ,@body)
+         (mapc 'kill (set-difference (all-procs) ,procs))))))
+
+(let ((output-channel (make-channel)))
+  (defun syncout (stream format-control &rest format-arguments)
+    "Call `format' synchronously, with the same arguments. Returns no useful values."
+    (send output-channel (list* stream format-control format-arguments))
+    (values))
+  ;; TODO: syncout-compile -- the equivalent of FORMATTER
+  (pexec (:name "SYNCOUT")
+    (loop (apply 'format (recv output-channel)))))

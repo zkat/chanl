@@ -6,20 +6,7 @@
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defpackage #:chanl-examples
-  (:use :cl :chanl)
-  (:export :first-n-primes))
-
 (in-package :chanl-examples)
-
-;;;
-;;; Utils
-;;;
-(defmacro cleanup-leftovers (&body body)
-  (let ((procs (gensym)))
-    `(let ((,procs (all-procs)))
-       (unwind-protect (progn ,@body)
-         (mapc 'kill (set-difference (all-procs) ,procs))))))
 
 ;;;
 ;;; Parallel Prime Sieve
@@ -30,7 +17,8 @@
 (defun filter (prime in out)
   (loop for i = (recv in)
      when (plusp (mod i prime))
-     do (send out i)))
+     do (send out i) #- (and) ; Enable for wavyness [TODO: channel-dynamic on/off] - Adlai
+       (syncout t "~&~A~D~%" (make-string prime :initial-element #\Space) i)))
 
 (defun sieve (output-channel)
   (let ((input-channel (make-channel 100)))
