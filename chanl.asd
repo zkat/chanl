@@ -16,5 +16,7 @@
   :description "Examples of how to use chanl"
   :depends-on (:chanl)
   :components ((:module "examples"
-                        :components ((:file "sieve")))))
+                        :components ((:file "package")
+                                     (:file "utils" :depends-on ("package"))
+                                     (:file "sieve" :depends-on ("utils"))))))
 
