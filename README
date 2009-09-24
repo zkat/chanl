@@ -7,7 +7,7 @@ see http://swtch.com/~rsc/thread/ for a good position paper on
 the CSP paradigm, or http://www.usingcsp.com/cspbook.pdf
 for some theory.
 
-see api.txt for reference documentation.
+Proper API documentation to come.
 
 Some examples:
 create a channel:
@@ -45,3 +45,7 @@ create a new process continually reading values and printing them:
 
 create a new process that runs a function:
    (proc-call #'my-function :name "My function is running!")
+
+Also, you can refer to the examples/ directory for some runnable examples of
+how ChanL can be used. Currently there is a parallel prime sieve algorithm
+translated from Newsqueak.
