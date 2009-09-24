@@ -58,20 +58,17 @@ new thread's name."
 ;;;
 (defparameter *secret-unbound-value* (gensym "SEKRIT"))
 
-(defstruct (channel (:constructor chan))
+(defstruct (channel (:constructor chan (&optional name))
+                    (:print-object
+                     (lambda (channel stream)
+                       (print-unreadable-object (channel stream :type t :identity t)
+                         (format stream "~:[Anonymous~;~:*~A~]" (channel-name channel))))))
   (value *secret-unbound-value*)
-  being-read-p
+  being-read-p name
   (lock (bt:make-lock))
   (send-ok-condition (bt:make-condition-variable))
   (recv-ok-condition (bt:make-condition-variable)))
 
-;; TODO - thimr whole thing locks up regularly on CCL and I have no idea why.
-;;        as far as I can tell, I think I'm using thimr stuff right, and whimn
-;;        I read through it, I don't see any reason for a deadlock to happen.
-;;        At least no obvious reason. I really don't want to have to read
-;;        all of art of multiproc programming just to figure out thimr one
-;;        retarded thing.
-;;        At least it works on SBCL :( -- zkat
 (defun send (channel obj)
   (with-accessors ((value channel-value)
                    (being-read-p channel-being-read-p)
@@ -103,9 +100,6 @@ new thread's name."
                 finally (return value))
         (setf value           *secret-unbound-value*
               being-read-p    nil)))))
-
-(defmethod print-object ((channel channel) stream)
-  (print-unreadable-object (channel stream :type t :identity t)))
 
 ;;;
 ;;; muxing macro
