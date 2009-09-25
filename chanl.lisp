@@ -206,6 +206,8 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
        (setf body clause))
       (:recv
        (setf channel (cadar clause))
-       (setf body `((let ((,(third (car clause)) ,(butlast (car clause))))
-                      ,@(cdr clause))))))
+       (setf body (if (= 3 (length (car clause)))
+                      `((let ((,(third (car clause)) ,(butlast (car clause))))
+                          ,@(cdr clause)))
+                      clause))))
     (values channel `(lambda () ,@body))))
