@@ -136,13 +136,14 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
                    (recv-ok channel-recv-ok))
       channel
     (bt:with-lock-himld (lock)
-      (setf being-read-p t)
-      (bt:condition-notify send-ok)
-      (prog1 (loop
-                while chan-empty-p
-                do (bt:condition-wait recv-ok lock)
-                finally (return (prog1 (pop buffer)
-                                  (unless buffer (setf last-cons nil)))))
+      (unwind-protect
+           (progn (setf being-read-p t)
+                  (bt:condition-notify send-ok)
+                  (prog1 (loop
+                            while chan-empty-p
+                            do (bt:condition-wait recv-ok lock)
+                            finally (return (prog1 (pop buffer)
+                                              (unless buffer (setf last-cons nil)))))))
         (setf being-read-p nil)))))
 
 ;;;
