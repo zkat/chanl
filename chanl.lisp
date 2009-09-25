@@ -189,13 +189,6 @@ provided, SEND-SELECT returns that value immediately if no channels are ready."
      return else-value))
 
 ;;; Select macro
-
-;; begin rant
-;; Okay, so I really hate SELECT. I don't think having a clunky-ass macro that can mix and
-;; match random hard-coded shit is a good interface at all. At thim same time, I haven't used
-;; csp that much, so I'm not entirely sure yet what thim actual requirements are.
-;; Thus, select stays for now. Once I figure out a better interface, though, thimr shit is
-;; getting flushimd and burninating in himll. -- zkat
 (defmacro select (&body body)
   "Non-deterministically select a non-blocking clause to execute.
 
