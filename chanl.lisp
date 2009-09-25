@@ -121,10 +121,12 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
   (queue-empty-p (channel-buffer channel)))
 
 (defun send-blocks-p (channel)
+  "True if trying to send something into the channel would block."
   (bt:with-lock-held ((channel-lock channel))
     (channel-full-p channel)))
 
 (defun recv-blocks-p (channel)
+  "True if trying to recv from the channel would block."
   (bt:with-lock-held ((channel-lock channel))
     (channel-empty-p channel)))
 
@@ -166,9 +168,10 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 ;;; Selecting channels
 ;;;
 (defun recv-select (channels &optional (else-value nil else-value-p))
-  "Selects a single channel from CHANNELS with input available and returns the result of calling
-RECV on it. If no channels have available input, blocks until it can RECV from one of them. If
-ELSE-VALUE is provided, RECV-SELECT returns that value immediately if no channels are ready."
+  "Selects a single channel from CHANNELS (a sequence) with input available and returns the result
+of calling RECV on it. If no channels have available input, blocks until it can RECV from one of
+them. If ELSE-VALUE is provided, RECV-SELECT returns that value immediately if no channels are
+ready."
   (loop with ready-channel = (find-if-not #'recv-blocks-p channels)
      if ready-channel
      return (recv ready-channel)
@@ -176,36 +179,38 @@ ELSE-VALUE is provided, RECV-SELECT returns that value immediately if no channel
      return else-value))
 
 (defun send-select (value channels &optional (else-value nil else-value-p))
-  "Selects a single channel from CHANNELS that is ready for input and sends VALUE into it.
-If no channels are ready for input, blocks until it can SEND to one of them. If ELSE-VALUE
-is provided, SEND-SELECT returns that value immediately if no channels are ready."
+  "Selects a single channel from CHANNELS (a sequence) that is ready for input and sends VALUE into it.
+If no channels are ready for input, blocks until it can SEND to one of them. If ELSE-VALUE is
+provided, SEND-SELECT returns that value immediately if no channels are ready."
   (loop with ready-channel = (find-if-not #'send-blocks-p channels)
      if ready-channel
      return (send ready-channel value)
      else if else-value-p
      return else-value))
 
-;;; Functional stuff
-(defun select-from-clauses (clauses)
-  ;; TODO - This will cause serious CPU thrashing if there's no else clause in SELECT.
-  ;;        Perhaps there's a way to alleviate that using condition-vars? Or even channels?
-  (loop
-     with ready-clause = (find-if-not #'clause-blocks-p clauses)
-     when ready-clause
-     return (funcall (clause-object-function ready-clause))))
+;;; Select macro
 
-(defstruct (clause-object (:constructor make-clause-object (op channel function)))
-  op channel function)
-
-(defun clause-blocks-p (clause)
-  (case (clause-object-op clause)
-    (:send (send-blocks-p (clause-object-channel clause)))
-    (:recv (recv-blocks-p (clause-object-channel clause)))
-    (:else nil)
-    (otherwise (error "Invalid clause op."))))
-
-;;; Macro
+;; begin rant
+;; Okay, so I really hate SELECT. I don't think having a clunky-ass macro that can mix and
+;; match random hard-coded shit is a good interface at all. At the same time, I haven't used
+;; csp that much, so I'm not entirely sure yet what the actual requirements are.
+;; Thus, select stays for now. Once I figure out a better interface, though, this shit is
+;; getting flushed and burninating in hell. -- sykopomp
 (defmacro select (&body body)
+  "Non-deterministically select a non-blocking clause to execute.
+
+The syntax is:
+
+   select clause*
+   clause ::= (op form*)
+   op ::= (recv chan variable) | (send chan value) | else | otherwise | t
+   chan ::= An evaluated form representing a channel
+   variable ::= an unevaluated symbol RECV's return value is to be bound to. Made available to form*.
+   value ::= An evaluated form representing a value to send into the channel.
+
+SELECT will first attempt to find a non-blocking channel clause. If all channel clauses would block,
+and no else clause is provided, SELECT will block until one of the clauses is available for
+execution."
   `(select-from-clauses
     (list ,@(loop for clause in body
                collect (clause->make-clause-object clause)))))
@@ -246,3 +251,23 @@ is provided, SEND-SELECT returns that value immediately if no channels are ready
                           ,@(cdr clause)))
                       clause))))
     (values channel `(lambda () ,@body))))
+
+;;; Functional stuff
+(defun select-from-clauses (clauses)
+  ;; TODO - This will cause serious CPU thrashing if there's no else clause in SELECT.
+  ;;        Perhaps there's a way to alleviate that using condition-vars? Or even channels?
+  (loop
+     with ready-clause = (find-if-not #'clause-blocks-p clauses)
+     when ready-clause
+     return (funcall (clause-object-function ready-clause))))
+
+(defstruct (clause-object (:constructor make-clause-object (op channel function)))
+  op channel function)
+
+(defun clause-blocks-p (clause)
+  (case (clause-object-op clause)
+    (:send (send-blocks-p (clause-object-channel clause)))
+    (:recv (recv-blocks-p (clause-object-channel clause)))
+    (:else nil)
+    (otherwise (error "Invalid clause op."))))
+
