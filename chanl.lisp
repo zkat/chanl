@@ -72,7 +72,12 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
                     (:print-object
                      (lambda (channel stream)
                        (print-unreadable-object (channel stream :type t :identity t)
-                         (format stream "~A" (channel-name channel))))))
+                         (if (zerop (channel-buffer-size channel))
+                             (format stream "[Unbuffered, ~:[input available~;no input~]]"
+                                     (recv-blocks-p channel))
+                             (format stream "[Buffered: ~A/~A]"
+                                     (length (channel-buffer channel))
+                                     (channel-buffer-size channel)))))))
   (buffer nil)
   (buffer-size 0)
   last-cons
@@ -139,14 +144,6 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
                 finally (return (prog1 (pop buffer)
                                   (unless buffer (setf last-cons nil)))))
         (setf being-read-p nil)))))
-
-(defmethod print-object ((channel channel) stream)
-  (print-unreadable-object (channel stream :type t :identity t)
-    (if (zerop (channel-buffer-size channel))
-        (format stream "[unbuffered]")
-        (format stream "[~A/~A]"
-                (length (channel-buffer channel))
-                (channel-buffer-size channel)))))
 
 ;;;
 ;;; Select
