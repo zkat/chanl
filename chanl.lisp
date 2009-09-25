@@ -82,7 +82,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 
 (defun channel-full-p (channel)
   (if (zerop (channel-buffer-size channel))
-      (not (null (channel-buffer channel)))
+      t
       (<= (channel-buffer-size channel)
           (length (channel-buffer channel)))))
 
