@@ -1,28 +1,44 @@
-ChanL implements Communicating Sequential Processes. You can read more about what
-that means here:
+What is ChanL?
+-------------- 
+
+"Wh-what you have to understand is that-that ChanL is not a big blob of state. When you have a lot
+of global state with lots of threads, you need to, you need to lock it down. It's like a truck, and
+if too many people try to steal stuff from the back of that truck, you, you get problems.  ChanL is
+not a big truck. It's a series--it's a series of *tubes*."  
+- Sen. Ted Stevens
+
+In a nutshell, you create various processes sequentially executing tasks you need done,
+and use channel objects to communicate and synchronize the state of these processes.
+
+You can read more about what that means here:
 - http://swtch.com/~rsc/thread/
 - http://www.usingcsp.com/cspbook.pdf
 
+API
+---
 Proper API documentation to come.
 
+Examples
+--------
 Some examples:
 create a channel:
-
+`
    (defvar *c* (make-channel))
-
+`
 create a buffered channel with a buffer size of 5, with a name
-
+`
    (defvar *c* (make-channel :buffer-size 5 :name "My buffered channel"))
-
+`
 read a value from a channel (blocks if channel is empty)
-
+`
    (recv *c*)
-
+`
 write a value to a channel (blocks if channel is full, always blocks on unbuffered channels)
-
+`
    (send *c* 99)
-
+`
 wait for any of a number of things to occur:
+`
    (select
      ((recv sync)
       (print "got some value from sync~%"))
@@ -34,14 +50,16 @@ wait for any of a number of things to occur:
       (format t "got arg ~a, reply ~a~% from f" f arg reply))
      (otherwise
       (print "would have blocked~%")))"
-
+`
 create a new process continually reading values and printing them:
+ `
    (pexec (:name "Formatter process")
      (loop (format t "~a~%" (? *c*))))
-
+`
 create a new process that runs a function:
+` 
    (pcall #'my-function :name "My function is running!")
-
+`
 Also, you can refer to the examples/ directory for some runnable examples of
 how ChanL can be used. Currently there is a parallel prime sieve algorithm
 translated from Newsqueak.
