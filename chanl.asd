@@ -18,5 +18,6 @@
   :components ((:module "examples"
                         :components ((:file "package")
                                      (:file "utils" :depends-on ("package"))
+                                     (:file "conditions" :depends-on ("utils"))
                                      (:file "sieve" :depends-on ("utils"))))))
 
