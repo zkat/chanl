@@ -183,9 +183,8 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
   (eq 'recv (caar clause)))
 (defun else-clause-p (clause)
   (or (eq t (car clause))
-      ;; might cause package issues??
       (eq 'else (car clause))
-      (eq 'otherwise (car clause))))
+      (eq 'otherwise (car clause)))) ;nope, no probs (I guess only if you :use :cl?)
 
 (defun clause->make-clause-object (clause)
   (let ((op (cond ((else-clause-p clause) :else)
