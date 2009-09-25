@@ -101,7 +101,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
                                      (queue-count (channel-buffer channel))
                                      (channel-buffer-size channel)))))))
   (buffer (make-queue))
-  (buffer-size 0)
+  (buffer-size buffer-size)
   last-cons
   (being-read-p nil :type (member t nil))
   (name "Anonymous" :type string :read-only t)
