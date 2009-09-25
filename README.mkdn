@@ -25,55 +25,42 @@ Some examples:
 
 create a channel:
 
-`
-   (defvar *c* (make-channel))
-
+     (defvar *c* (make-channel))
 
 create a buffered channel with a buffer size of 5, with a name
 
-`
-   (defvar *c* (make-channel :buffer-size 5 :name "My buffered channel"))
-
+     (defvar *c* (make-channel :buffer-size 5 :name "My buffered channel"))
 
 read a value from a channel (blocks if channel is empty)
 
-`
-   (recv *c*)
-
+     (recv *c*)
 
 write a value to a channel (blocks if channel is full, always blocks on unbuffered channels)
 
-`
-   (send *c* 99)
-
+     (send *c* 99)
 
 wait for any of a number of things to occur:
-`
-   (select
-     ((recv sync)
-      (print "got some value from sync~%"))
-     ((recv c d)
-      (format t "got ~a from c~%" d))
-     ((send e val)
-      (print "sent val on e~%"))
-     ((recv f (&key arg reply))
-      (format t "got arg ~a, reply ~a~% from f" f arg reply))
-     (otherwise
-      (print "would have blocked~%")))
 
+     (select
+       ((recv sync)
+        (print "got some value from sync~%"))
+       ((recv c d)
+        (format t "got ~a from c~%" d))
+       ((send e val)
+        (print "sent val on e~%"))
+       ((recv f (&key arg reply))
+        (format t "got arg ~a, reply ~a~% from f" f arg reply))
+       (otherwise
+        (print "would have blocked~%")))
 
 create a new process continually reading values and printing them:
 
-`
-   (pexec (:name "Formatter process")
-     (loop (format t "~a~%" (? *c*))))
-
+     (pexec (:name "Formatter process")
+       (loop (format t "~a~%" (? *c*))))
 
 create a new process that runs a function:
 
-` 
-   (pcall #'my-function :name "My function is running!")
-
+     (pcall #'my-function :name "My function is running!")
 
 Also, you can refer to the examples/ directory for some runnable examples of
 how ChanL can be used. Currently there is a parallel prime sieve algorithm
