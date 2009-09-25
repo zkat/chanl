@@ -14,7 +14,9 @@
    #:*default-special-bindings* #:all-procs
    ;; channels
    #:make-channel #:send #:recv
-   #:channel #:send-blocks-p #:recv-blocks-p))
+   #:channel #:send-blocks-p #:recv-blocks-p
+   ;; selecting!
+   #:select))
 
 (in-package :chanl)
 
