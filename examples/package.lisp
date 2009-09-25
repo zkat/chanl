@@ -7,7 +7,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defpackage #:chanl-examples
-  (:use :cl :chanl)
+  (:use :cl :chanl :ltk)
   (:export :cleanup-leftovers :syncout
-           :first-n-primes))
+           :first-n-primes :ltk-button-demo))
 
