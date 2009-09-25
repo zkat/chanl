@@ -249,10 +249,16 @@ execution."
 (defun select-from-clauses (clauses)
   ;; TODO - This will cause serious CPU thrashing if there's no else clause in SELECT.
   ;;        Perhaps there's a way to alleviate that using condition-vars? Or even channels?
-  (loop
-     with ready-clause = (find-if-not #'clause-blocks-p clauses)
-     when ready-clause
-     return (funcall (clause-object-function ready-clause))))
+  (let ((send/recv (remove-if-not (fun (or (eq :recv (clause-object-op _))
+                                           (eq :send (clause-object-op _))))
+                                  clauses))
+        (else-clause (find-if (fun (eq :else (clause-object-op _))) clauses)))
+    (loop
+       with ready-clause = (find-if-not #'clause-blocks-p send/recv)
+       if ready-clause
+       return (funcall (clause-object-function ready-clause))
+       else if else-clause
+       return (funcall (clause-object-function else-clause)))))
 
 (defstruct (clause-object (:constructor make-clause-object (op channel function)))
   op channel function)
