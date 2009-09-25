@@ -27,6 +27,32 @@
   "This macro puts the FUN back in FUNCTION."
   `(lambda (&optional _) (declare (ignorable _)) ,@body))
 
+;;; Queue
+(defstruct (queue (:predicate queuep))
+  head tail)
+
+(defun queue-peek (queue)
+  (car (queue-head queue)))
+
+(defun queue-empty-p (queue)
+  (null (queue-head queue)))
+
+(defun queue-count (queue)
+  (length (queue-head queue)))
+
+(defun enqueue (object queue)
+  (let ((tail-cons (list object)))
+    (setf (queue-head queue)
+          (nconc (queue-head queue) tail-cons))
+    (setf (queue-tail queue) tail-cons)
+    object))
+
+(defun dequeue (queue)
+  (prog1
+      (pop (queue-head queue))
+    (when (null (queue-head queue))
+      (setf (queue-tail queue) nil))))
+
 ;;;
 ;;; Threads
 ;;;
