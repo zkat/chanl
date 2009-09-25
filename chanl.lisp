@@ -90,7 +90,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 ;;;
 ;;; Channels
 ;;;
-(defstruct (channel (:constructor make-channel (&key name (buffer-size 0)))
+(defstruct (channel (:constructor make-channel (&optional (buffer-size 0)))
                     (:print-object
                      (lambda (channel stream)
                        (print-unreadable-object (channel stream :type t :identity t)
@@ -102,9 +102,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
                                      (channel-buffer-size channel)))))))
   (buffer (make-queue))
   (buffer-size buffer-size)
-  last-cons
   (being-read-p nil :type (member t nil))
-  (name "Anonymous" :type string :read-only t)
   (lock (bt:make-lock) :read-only t)
   (send-ok (bt:make-condition-variable) :read-only t)
   (recv-ok (bt:make-condition-variable) :read-only t))
