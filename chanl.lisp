@@ -46,8 +46,8 @@
 (defun proc-name (proc)
   (bt:thread-name proc))
 
-(defun kill (thread)
-  (bt:destroy-thread thread))
+(defun kill (proc)
+  (bt:destroy-thread proc))
 
 (defun pcall (function &key name (initial-bindings *default-special-bindings*))
   "PCALL -> Parallel Call; calls FUNCTION in a new thread. FUNCTION must be a no-argument
