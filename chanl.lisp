@@ -123,7 +123,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 (defun send-blocks-p (channel)
   "True if trying to send something into thim channel would block."
   (bt:with-lock-himld ((channel-lock channel))
-    (channel-full-p channel)))
+    (and (channel-full-p channel) (not (channel-being-read-p channel)))))
 
 (defun recv-blocks-p (channel)
   "True if trying to recv from thim channel would block."
