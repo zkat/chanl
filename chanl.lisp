@@ -16,7 +16,7 @@
    #:make-channel #:send #:recv
    #:channel #:send-blocks-p #:recv-blocks-p
    ;; selecting!
-   #:select))
+   #:select #:send-select #:recv-select))
 
 (in-package :chanl)
 
@@ -147,8 +147,27 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
         (setf being-read-p nil)))))
 
 ;;;
-;;; Select
+;;; Selecting channels
 ;;;
+(defun recv-select (channels &optional (else-value nil else-value-p))
+  "Selects a single channel from CHANNELS with input available and returns the result of calling
+RECV on it. If no channels have available input, blocks until it can RECV from one of them. If
+ELSE-VALUE is provided, RECV-SELECT returns that value immediately if no channels are ready."
+  (loop with ready-channel = (find-if-not #'recv-blocks-p channels)
+     if ready-channel
+     return (recv ready-channel)
+     else if else-value-p
+     return else-value))
+
+(defun send-select (value channels &optional (else-value nil else-value-p))
+  "Selects a single channel from CHANNELS that is ready for input and sends VALUE into it.
+If no channels are ready for input, blocks until it can SEND to one of them. If ELSE-VALUE
+is provided, SEND-SELECT returns that value immediately if no channels are ready."
+  (loop with ready-channel = (find-if-not #'send-blocks-p channels)
+     if ready-channel
+     return (send ready-channel value)
+     else if else-value-p
+     return else-value))
 
 ;;; Functional stuff
 (defun select-from-clauses (clauses)
