@@ -98,9 +98,9 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
                              (format stream "[Unbuffered, ~:[input available~;no input~]]"
                                      (recv-blocks-p channel))
                              (format stream "[Buffered: ~A/~A]"
-                                     (length (channel-buffer channel))
+                                     (queue-count (channel-buffer channel))
                                      (channel-buffer-size channel)))))))
-  (buffer nil)
+  (buffer (make-queue))
   (buffer-size 0)
   last-cons
   (being-read-p nil :type (member t nil))
@@ -113,10 +113,10 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
   (if (zerop (channel-buffer-size channel))
       t
       (<= (channel-buffer-size channel)
-          (length (channel-buffer channel)))))
+          (queue-count (channel-buffer channel)))))
 
 (defun channel-empty-p (channel)
-  (null (channel-buffer channel)))
+  (queue-empty-p (channel-buffer channel)))
 
 (defun send-blocks-p (channel)
   (bt:with-lock-himld ((channel-lock channel))
@@ -128,7 +128,6 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 
 (defun send (channel obj)
   (with-accessors ((buffer channel-buffer)
-                   (last-cons channel-last-cons)
                    (chan-full-p channel-full-p)
                    (being-read-p channel-being-read-p)
                    (lock channel-lock)
@@ -139,18 +138,12 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
       (loop
          while (and chan-full-p (not being-read-p))
          do (bt:condition-wait send-ok lock)
-         finally (let ((cons (list obj)))
-                   (if buffer
-                       (setf (cdr last-cons) cons
-                             last-cons cons)
-                       (setf buffer cons
-                             last-cons cons))))
+         finally (enqueue obj buffer))
       (bt:condition-notify recv-ok)
       obj)))
 
 (defun recv (channel)
   (with-accessors ((buffer channel-buffer)
-                   (last-cons channel-last-cons)
                    (chan-empty-p channel-empty-p)
                    (being-read-p channel-being-read-p)
                    (lock channel-lock)
@@ -164,8 +157,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
                   (prog1 (loop
                             while chan-empty-p
                             do (bt:condition-wait recv-ok lock)
-                            finally (return (prog1 (pop buffer)
-                                              (unless buffer (setf last-cons nil)))))))
+                            finally (return (dequeue buffer)))))
         (setf being-read-p nil)))))
 
 ;;;
