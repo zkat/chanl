@@ -1,11 +1,7 @@
-Code this library was originally based on was
-ported from plan9's libthread/channel.c via plan9port
-by roger peppe (rogpeppe@gmail.com), although basically none
-of that code exists in ChanL anymore.
-
-see http://swtch.com/~rsc/thread/ for a good position paper on
-the CSP paradigm, or http://www.usingcsp.com/cspbook.pdf
-for some theory.
+ChanL implements Communicating Sequential Processes. You can read more about what
+that means here:
+- http://swtch.com/~rsc/thread/
+- http://www.usingcsp.com/cspbook.pdf
 
 Proper API documentation to come.
 
@@ -26,25 +22,25 @@ write a value to a channel (blocks if channel is full, always blocks on unbuffer
 
    (send *c* 99)
 
-wait for any of a number of things to occur (unavailable right now):
-   (mux
-       ((recv sync)
-        (print "got some value from sync~%"))
-       ((recv c d)
-        (format t "got ~a from c~%" d))
-       ((send e val)
-        (print "sent val on e~%"))
-       ((recv f (&key arg reply))
-        (format t "got arg ~a, reply ~a~% from f" f arg reply))
-       (otherwise
-        (print "would have blocked~%")))"
+wait for any of a number of things to occur:
+   (select
+     ((recv sync)
+      (print "got some value from sync~%"))
+     ((recv c d)
+      (format t "got ~a from c~%" d))
+     ((send e val)
+      (print "sent val on e~%"))
+     ((recv f (&key arg reply))
+      (format t "got arg ~a, reply ~a~% from f" f arg reply))
+     (otherwise
+      (print "would have blocked~%")))"
 
 create a new process continually reading values and printing them:
-   (proc-exec (:name "Formatter process")
+   (pexec (:name "Formatter process")
      (loop (format t "~a~%" (? *c*))))
 
 create a new process that runs a function:
-   (proc-call #'my-function :name "My function is running!")
+   (pcall #'my-function :name "My function is running!")
 
 Also, you can refer to the examples/ directory for some runnable examples of
 how ChanL can be used. Currently there is a parallel prime sieve algorithm
