@@ -172,7 +172,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 of calling RECV on it. If no channels have available input, blocks until it can RECV from one of
 them. If ELSE-VALUE is provided, RECV-SELECT returns that value immediately if no channels are
 ready."
-  (loop with ready-channel = (find-if-not #'recv-blocks-p channels)
+  (loop for ready-channel = (find-if-not #'recv-blocks-p channels)
      if ready-channel
      return (recv ready-channel)
      else if else-value-p
@@ -182,7 +182,7 @@ ready."
   "Selects a single channel from CHANNELS (a sequence) that is ready for input and sends VALUE into it.
 If no channels are ready for input, blocks until it can SEND to one of them. If ELSE-VALUE is
 provided, SEND-SELECT returns that value immediately if no channels are ready."
-  (loop with ready-channel = (find-if-not #'send-blocks-p channels)
+  (loop for ready-channel = (find-if-not #'send-blocks-p channels)
      if ready-channel
      return (send ready-channel value)
      else if else-value-p
@@ -254,7 +254,7 @@ execution."
                                   clauses))
         (else-clause (find-if (fun (eq :else (clause-object-op _))) clauses)))
     (loop
-       with ready-clause = (find-if-not #'clause-blocks-p send/recv)
+       for ready-clause = (find-if-not #'clause-blocks-p send/recv)
        if ready-clause
        return (funcall (clause-object-function ready-clause))
        else if else-clause
