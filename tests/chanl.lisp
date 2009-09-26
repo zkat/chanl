@@ -26,5 +26,7 @@
     (is (procp proc))
     (is (proc-alive-p proc))
     (is (string= "proc" (proc-name proc)))
+    (is (member proc (all-procs)))
     (kill proc)
-    (is (proc-alive-p proc))))
+    (is (not (proc-alive-p proc)))
+    (signals error (kill (current-proc)))))
