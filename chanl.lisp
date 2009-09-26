@@ -95,28 +95,31 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 ;;;
 ;;; Channels
 ;;;
-(defstruct (channel (:constructor make-channel (&optional buffer-size))
+(defvar *secret-unbound-value* (gensym "SECRETLY-UNBOUND-"))
+
+(defstruct (channel (:constructor %make-channel)
                     (:predicate channelp)
                     (:print-object
                      (lambda (channel stream)
                        (print-unreadable-object (channel stream :type t :identity t)
-                         (if (zerop (channel-buffer-size channel))
-                             (format stream "[Unbuffered, ~:[input available~;no input~]]"
-                                     (recv-blocks-p channel))
+                         (if (channel-buffer channel)
                              (format stream "[Buffered: ~A/~A]"
                                      (queue-count (channel-buffer channel))
-                                     (channel-buffer-size channel)))))))
-  (buffer (make-queue))
-  ;; In order to enforce this at the queue level, we need to get rid of some
-  ;; cheating ChanL does in order to get SEND/RECV to cooperate.
-  ;; During the blocking SEND/RECV process, channels temporarily have one more
-  ;; item in them than buffer-size would usually allow.
-  (buffer-size 0 :read-only t)
+                                     (channel-buffer-size channel))
+                             (format stream "[Unbuffered, ~:[input available~;no input~]]"
+                                     (recv-blocks-p channel)))))))
+  (value *secret-unbound-value*)
+  buffer
   (being-written-p nil :type (member t nil))
   (being-read-p nil :type (member t nil))
   (lock (bt:make-recursive-lock) :read-only t)
   (send-ok (bt:make-condition-variable) :read-only t)
   (recv-ok (bt:make-condition-variable) :read-only t))
+
+(defun make-channel (&optional buffer-size)
+  (if buffer-size
+      (%make-queue :buffer (make-queue buffer-size))
+      (%make-queue)))
 
 (defun channel-full-p (channel)
   (if (zerop (channel-buffer-size channel))
