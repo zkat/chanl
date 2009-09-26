@@ -37,7 +37,7 @@
   (let ((channel (make-channel)))
     (is (channelp channel))
     (is (not (channel-full-p channel)))
-    (is (not (channel-empty-p channel)))
+    (is (channel-empty-p channel))
     (is (send-blocks-p channel))
     (is (recv-blocks-p channel))))
 
@@ -46,8 +46,10 @@
          (proc (pexec () (recv channel))))
     (unwind-protect
          (progn
-           (is (channel-empty-p channel))
+           (loop :until (find proc (all-procs))
+              :finally (sleep 1))
            (is (not (channel-full-p channel)))
+           (is (channel-empty-p channel))
            (is (not (send-blocks-p channel)))
            (is (recv-blocks-p channel)))
       (kill proc))))
@@ -57,8 +59,10 @@
          (proc (pexec () (send channel nil))))
     (unwind-protect
          (progn
-           (is (not (channel-empty-p channel)))
-           (is (channel-full-p channel))
+           (loop :until (find proc (all-procs))
+              :finally (sleep 1))
+           (is (not (channel-full-p channel)))
+           (is (channel-empty-p channel))
            (is (send-blocks-p channel))
            (is (not (recv-blocks-p channel))))
       (kill proc))))
