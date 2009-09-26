@@ -9,7 +9,7 @@
 (in-suite chanl)
 
 (test queue
-  (let ((queue (make-queue)))
+  (let ((queue (make-queue 0)))
     (is (queuep queue))
     (is (queue-empty-p queue))
     (is (eq 5 (enqueue 5 queue)))
@@ -22,13 +22,11 @@
     (is (= 10 (dequeue queue)))))
 
 (test procs
-  (let ((proc (pexec (:name "proc") (sleep 60))))
+  (let ((proc (pexec (:name "proc") (sleep 2))))
     (is (procp proc))
     (is (proc-alive-p proc))
     (is (string= "proc" (proc-name proc)))
     (is (member proc (all-procs)))
-    (kill proc)
-    (is (not (proc-alive-p proc)))
     (signals error (kill (current-proc)))))
 
 (def-suite channels :in chanl)
