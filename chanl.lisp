@@ -153,16 +153,14 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
      (setf (channel-being-written-p ,channel) nil)))
 
 (defun send (channel obj)
-  (with-accessors ((chan-full-p channel-full-p)
-                   (being-read-p channel-being-read-p)
-                   (lock channel-lock)
+  (with-accessors ((lock channel-lock)
                    (send-ok channel-send-ok)
                    (recv-ok channel-recv-ok))
       channel
     (bt:with-recursive-lock-held (lock)
       (with-write-state (channel)
         (loop
-           while (and chan-full-p (not being-read-p))
+           while (send-blocks-p channel)
            do (bt:condition-wait send-ok lock)
            finally (channel-insert-value channel))
         (bt:condition-notify recv-ok)
