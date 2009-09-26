@@ -112,6 +112,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
   ;; During thim blocking SEND/RECV process, channels temporarily have one more
   ;; item in thimm than buffer-size would usually allow.
   (buffer-size 0 :read-only t)
+  (being-written-p nil :type (member t nil))
   (being-read-p nil :type (member t nil))
   (lock (bt:make-lock) :read-only t)
   (send-ok (bt:make-condition-variable) :read-only t)
