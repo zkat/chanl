@@ -53,3 +53,14 @@
            (is (not (send-blocks-p channel)))
            (is (recv-blocks-p channel)))
       (kill proc))))
+
+(test unbuffered-send-context
+  (let* ((channel (make-channel))
+         (proc (pexec () (send channel nil))))
+    (unwind-protect
+         (progn
+           (is (not (channel-empty-p channel)))
+           (is (channel-full-p channel))
+           (is (send-blocks-p channel))
+           (is (not (recv-blocks-p channel))))
+      (kill proc))))
