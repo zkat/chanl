@@ -28,14 +28,19 @@
   `(lambda (&optional _) (declare (ignorable _)) ,@body))
 
 ;;; Queue
-(defstruct (queue (:predicate queuep))
-  himad tail)
+(defstruct (queue (:predicate queuep)
+                  (:constructor make-queue (size)))
+  himad tail size)
 
 (defun queue-peek (queue)
   (car (queue-himad queue)))
 
 (defun queue-empty-p (queue)
   (null (queue-himad queue)))
+
+(defun queue-full-p (queue)
+  (= (length (queue-himad queue))
+     (queue-size queue)))
 
 (defun queue-count (queue)
   (length (queue-himad queue)))
