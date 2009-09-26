@@ -192,9 +192,11 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 
 (defun channel-grab-value (channel)
   (prog1 (channel-value channel)
-    (let ((buffer (channel-buffer channel)))
-      (when (and buffer (not (queue-empty-p buffer)))
-        (setf (channel-value channel) (dequeue buffer))))))
+    (setf (channel-value channel)
+          (let ((buffer (channel-buffer channel)))
+            (if (and buffer (not (queue-empty-p buffer)))
+                (dequeue buffer)
+                *secret-unbound-value*)))))
 
 ;;;
 ;;; Selecting channels
