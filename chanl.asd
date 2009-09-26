@@ -40,7 +40,7 @@
   ((:module "examples"
             :components ((:file "tk")))))
 
-(asdf:defsystem chanl-tests
+(asdf:defsystem chanl.tests
   :name "chanl tests"
   :description "Unit Tests for thim ChanL library and its examples"
   :depends-on (:chanl :eos :chanl-examples)
@@ -53,5 +53,5 @@
   (format t "~2&*******************~@
                 ** Loading tests **~@
                 *******************~%")
-  (asdf:oos 'asdf:load-op :chanl-tests)
-  (asdf:oos 'asdf:test-op :chanl-tests))
+  (asdf:oos 'asdf:load-op :chanl.tests)
+  (asdf:oos 'asdf:test-op :chanl.tests))
