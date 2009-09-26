@@ -35,8 +35,8 @@
 (test unbuffered-ignored
   (let ((channel (make-channel)))
     (is (channelp channel))
-    (is (not (channel-full-p channel)))
-    (is (channel-empty-p channel))
+    (signals error (channel-full-p channel))
+    (signals error (channel-empty-p channel))
     (is (send-blocks-p channel))
     (is (recv-blocks-p channel))))
 
@@ -45,8 +45,8 @@
          (procs (loop repeat 20 collect (pexec () (recv channel)))))
     (unwind-protect
          (progn
-           (is (not (channel-full-p channel)))
-           (is (channel-empty-p channel))
+           (signals error (channel-full-p channel))
+           (signals error (channel-empty-p channel))
            (is (not (send-blocks-p channel)))
            (is (recv-blocks-p channel)))
       (mapcar 'kill procs))))
@@ -56,8 +56,8 @@
          (procs (loop repeat 20 collect (pexec () (send channel nil)))))
     (unwind-protect
          (progn
-           (is (not (channel-full-p channel)))
-           (is (channel-empty-p channel))
+           (signals error (channel-full-p channel))
+           (signals error (channel-empty-p channel))
            (is (send-blocks-p channel))
            (is (not (recv-blocks-p channel))))
       (mapcar 'kill procs))))
