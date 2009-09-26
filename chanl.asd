@@ -9,7 +9,8 @@
   :components ((:module "src"
                         :components ((:file "package")
                                      (:file "utils" :depends-on ("package"))
-                                     (:file "channels" :depends-on ("utils")))))
+                                     (:file "procs" :depends-on ("package"))
+                                     (:file "channels" :depends-on ("utils" "procs")))))
 
 (asdf:defsystem chanl.examples
   :name "chanl examples"
