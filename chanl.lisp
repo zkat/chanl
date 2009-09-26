@@ -137,6 +137,12 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
   (bt:with-lock-held ((channel-lock channel))
     (channel-empty-p channel)))
 
+(defmacro with-write-state ((channel) &body body)
+  `(unwind-protect
+        (progn (setf (channel-being-written-p ,channel) t)
+               ,@body)
+     (setf (channel-being-written-p ,channel) nil))  )
+
 (defun send (channel obj)
   (with-accessors ((chan-full-p channel-full-p)
                    (being-read-p channel-being-read-p)
@@ -145,12 +151,13 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
                    (recv-ok channel-recv-ok))
       channel
     (bt:with-lock-held (lock)
-      (loop
-         while (and chan-full-p (not being-read-p))
-         do (bt:condition-wait send-ok lock)
-         finally (channel-insert-value channel))
-      (bt:condition-notify recv-ok)
-      obj)))
+      (with-write-state (channel)
+        (loop
+           while (and chan-full-p (not being-read-p))
+           do (bt:condition-wait send-ok lock)
+           finally (channel-insert-value channel))
+        (bt:condition-notify recv-ok)
+        obj))))
 
 (defun channel-insert-value (channel value)
   (enqueue value (channel-buffer value)))
@@ -163,6 +170,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 
 (defun recv (channel)
   (with-accessors ((chan-empty-p channel-empty-p)
+                   (being-written-p channel-being-written-p)
                    (lock channel-lock)
                    (send-ok channel-send-ok)
                    (recv-ok channel-recv-ok))
@@ -171,7 +179,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
       (with-read-state (channel)
         (bt:condition-notify send-ok)
         (prog1 (loop
-                  while chan-empty-p
+                  while (and chan-empty-p (not being-written-p))
                   do (bt:condition-wait recv-ok lock)
                   finally (return (grab-channel-value channel))))))))
 
