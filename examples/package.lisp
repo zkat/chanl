@@ -5,13 +5,6 @@
 ;;;; Package definition for the CHANL-EXAMPLES package
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defpackage #:chanl.examples
+  (:use :cl :chanl))
 
-(defpackage #:chanl-examples
-  (:use :cl :chanl)
-  (:export :cleanup-leftovers :syncout
-           :first-n-primes :ltk-button-demo))
-
-(ignore-errors (asdf:oos 'asdf:load-op :ltk))
-
-(when (find-package "LTK")
-  (use-package :ltk :chanl-examples))
