@@ -95,8 +95,6 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 ;;;
 ;;; Channels
 ;;;
-(defvar *secret-unbound-value* (gensym "SECRETLY-UNBOUND-"))
-
 (defstruct (channel (:constructor %make-channel (buffer))
                     (:predicate channelp))
   buffer
@@ -106,6 +104,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
   (send-ok (bt:make-condition-variable) :read-only t)
   (recv-ok (bt:make-condition-variable) :read-only t))
 
+(defvar *secret-unbound-value* (gensym "SECRETLY-UNBOUND-"))
 (defun make-channel (&optional (buffer-size 0))
   (when (< buffer-size 0)
     (error "buffer size cannot be negative."))
