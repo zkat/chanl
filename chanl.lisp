@@ -164,9 +164,9 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 
 (defmacro with-read-state ((channel) &body body)
   `(unwind-protect
-        (progn (setf (channel-being-read ,channel) t)
+        (progn (setf (channel-being-read-p ,channel) t)
                ,@body)
-     (setf (channel-being-read ,channel) nil)))
+     (setf (channel-being-read-p ,channel) nil)))
 
 (defun recv (channel)
   (with-accessors ((chan-empty-p channel-empty-p)
