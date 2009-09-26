@@ -95,9 +95,9 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 ;;;
 ;;; Channels
 ;;;
-(defstruct (channel (:constructor %make-channel (buffer))
+(defstruct (channel (:constructor %make-channel)
                     (:predicate channelp))
-  buffer
+  buffer buffered-p
   (being-written-p nil :type (member t nil))
   (being-read-p nil :type (member t nil))
   (lock (bt:make-recursive-lock) :read-only t)
@@ -108,20 +108,21 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 (defun make-channel (&optional (buffer-size 0))
   (when (< buffer-size 0)
     (error "buffer size cannot be negative."))
-  (if (< buffer-size 0)
-      (%make-channel (make-queue buffer-size))
-      (%make-channel *secret-unbound-value*)))
-
-(defun buffered-channel-p (channel)
-  (when (channel-buffer channel) t))
+  (let ((channel (%make-channel)))
+    (if (< buffer-size 0)
+        (progn
+          (setf (channel-buffer channel) (make-queue buffer-size))
+          (setf (channel-buffered-p channel) t))
+        (setf (channel-buffer channel) *secret-unbound-value*))
+    channel))
 
 (defun channel-full-p (channel)
-  (if (buffered-channel-p channel)
+  (if (channel-buffered-p channel)
       (queue-full-p (channel-buffer channel))
       t))
 
 (defun channel-empty-p (channel)
-  (if (buffered-channel-p channel)
+  (if (channel-buffered-p channel)
       (queue-empty-p (channel-buffer channel))
       t))
 
