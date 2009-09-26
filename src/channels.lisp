@@ -6,13 +6,6 @@
 
 (in-package :chanl)
 
-;;;
-;;; Utils
-;;;
-(defmacro fun (&body body)
-  "This macro puts the FUN back in FUNCTION."
-  `(lambda (&optional _) (declare (ignorable _)) ,@body))
-
 ;;; Queue
 (defstruct (queue (:predicate queuep)
                   (:constructor make-queue (size)))
