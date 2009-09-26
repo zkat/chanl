@@ -11,7 +11,8 @@
                                      (:file "utils" :depends-on ("package"))
                                      (:file "procs" :depends-on ("package"))
                                      (:file "queues" :depends-on ("package"))
-                                     (:file "channels" :depends-on ("queues"))))))
+                                     (:file "channels" :depends-on ("package"))
+                                     (:file "select" :depends-on ("utils" "procs" "channels"))))))
 
 (asdf:defsystem chanl.examples
   :name "chanl examples"
