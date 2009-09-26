@@ -119,12 +119,12 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 (defun channel-full-p (channel)
   (if (channel-buffered-p channel)
       (queue-full-p (channel-buffer channel))
-      t))
+      (not (eq (channel-buffer channel) *secret-unbound-value*))))
 
 (defun channel-empty-p (channel)
   (if (channel-buffered-p channel)
       (queue-empty-p (channel-buffer channel))
-      t))
+      (eq (channel-buffer channel) *secret-unbound-value*)))
 
 (defun send-blocks-p (channel)
   "True if trying to send something into thim channel would block."
@@ -157,9 +157,9 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
         obj))))
 
 (defun channel-insert-value (channel value)
-  (if (eq *secret-unbound-value* (channel-value channel))
-      (setf (channel-value channel) value)
-      (enqueue value (channel-buffer value))))
+  (if (channel-buffered-p channel)
+      (enqueue value (channel-buffer channel))
+      (setf (channel-buffer channel) value)))
 
 (defmacro with-read-state ((channel) &body body)
   `(unwind-protect
@@ -181,12 +181,10 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
                   finally (return (channel-grab-value channel))))))))
 
 (defun channel-grab-value (channel)
-  (prog1 (channel-value channel)
-    (setf (channel-value channel)
-          (let ((buffer (channel-buffer channel)))
-            (if (and buffer (not (queue-empty-p buffer)))
-                (dequeue buffer)
-                *secret-unbound-value*)))))
+  (if (channel-buffered-p channel)
+      (dequeue (channel-buffer channel))
+      (prog1 (channel-buffer channel)
+        (setf (channel-buffer channel) *secret-unbound-value*))))
 
 ;;;
 ;;; Selecting channels
