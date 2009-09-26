@@ -167,7 +167,9 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
         obj))))
 
 (defun channel-insert-value (channel value)
-  (enqueue value (channel-buffer value)))
+  (if (eq *secret-unbound-value* (channel-value channel))
+      (setf (channel-value channel) value)
+      (enqueue value (channel-buffer value))))
 
 (defmacro with-read-state ((channel) &body body)
   `(unwind-protect
