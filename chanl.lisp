@@ -176,9 +176,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
      (setf (channel-being-read-p ,channel) nil)))
 
 (defun recv (channel)
-  (with-accessors ((chan-empty-p channel-empty-p)
-                   (being-written-p channel-being-written-p)
-                   (lock channel-lock)
+  (with-accessors ((lock channel-lock)
                    (send-ok channel-send-ok)
                    (recv-ok channel-recv-ok))
       channel
@@ -186,7 +184,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
       (with-read-state (channel)
         (bt:condition-notify send-ok)
         (prog1 (loop
-                  while (and chan-empty-p (not being-written-p))
+                  while (recv-blocks-p channel)
                   do (bt:condition-wait recv-ok lock)
                   finally (return (grab-channel-value channel))))))))
 
