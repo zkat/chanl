@@ -91,6 +91,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 ;;; Channels
 ;;;
 (defstruct (channel (:constructor make-channel (&optional buffer-size))
+                    (:predicate channelp)
                     (:print-object
                      (lambda (channel stream)
                        (print-unreadable-object (channel stream :type t :identity t)
