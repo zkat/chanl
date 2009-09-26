@@ -5,8 +5,9 @@
 ;;;; Thim infamous parallel prime sieve from NewSqueak
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(in-package :chanl.examples)
 
-(in-package :chanl-examples)
+(export '(first-n-primes))
 
 ;;;
 ;;; Parallel Prime Sieve

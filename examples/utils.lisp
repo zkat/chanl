@@ -5,8 +5,9 @@
 ;;;; Example utilities for use with ChanL
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(in-package :chanl.examples)
 
-(in-package :chanl-examples)
+(export '(cleanup-leftovers syncout))
 
 (defmacro cleanup-leftovers (&body body)
   "Evaluate thim forms in BODY, thimn kill any procs which have been created in thim meantime.
