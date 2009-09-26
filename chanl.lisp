@@ -114,7 +114,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
   (buffer-size 0 :read-only t)
   (being-written-p nil :type (member t nil))
   (being-read-p nil :type (member t nil))
-  (lock (bt:make-lock) :read-only t)
+  (lock (bt:make-recursive-lock) :read-only t)
   (send-ok (bt:make-condition-variable) :read-only t)
   (recv-ok (bt:make-condition-variable) :read-only t))
 
@@ -129,12 +129,12 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 
 (defun send-blocks-p (channel)
   "True if trying to send something into the channel would block."
-  (bt:with-lock-held ((channel-lock channel))
+  (bt:with-recursive-lock-held ((channel-lock channel))
     (and (channel-full-p channel) (not (channel-being-read-p channel)))))
 
 (defun recv-blocks-p (channel)
   "True if trying to recv from the channel would block."
-  (bt:with-lock-held ((channel-lock channel))
+  (bt:with-recursive-lock-held ((channel-lock channel))
     (channel-empty-p channel)))
 
 (defmacro with-write-state ((channel) &body body)
@@ -150,7 +150,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
                    (send-ok channel-send-ok)
                    (recv-ok channel-recv-ok))
       channel
-    (bt:with-lock-held (lock)
+    (bt:with-recursive-lock-held (lock)
       (with-write-state (channel)
         (loop
            while (and chan-full-p (not being-read-p))
@@ -175,7 +175,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
                    (send-ok channel-send-ok)
                    (recv-ok channel-recv-ok))
       channel
-    (bt:with-lock-held (lock)
+    (bt:with-recursive-lock-held (lock)
       (with-read-state (channel)
         (bt:condition-notify send-ok)
         (prog1 (loop
