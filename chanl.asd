@@ -8,7 +8,8 @@
   :depends-on (:bordeaux-threads)
   :components ((:module "src"
                         :components ((:file "package")
-                                     (:file "channels" :depends-on ("package")))))
+                                     (:file "utils" :depends-on ("package"))
+                                     (:file "channels" :depends-on ("utils")))))
 
 (asdf:defsystem chanl.examples
   :name "chanl examples"
