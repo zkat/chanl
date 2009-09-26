@@ -174,7 +174,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
                   do (bt:condition-wait recv-ok lock)
                   finally (return (grab-channel-value channel))))))))
 
-(defun grab-channel-value (channel)
+(defun channel-grab-value (channel)
   (dequeue (channel-buffer channel)))
 
 ;;;
