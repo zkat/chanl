@@ -9,7 +9,7 @@
   :components
   ((:file "chanl")))
 
-(asdf:defsystem chanl-examples
+(asdf:defsystem chanl.examples
   :name "chanl examples"
   :maintainer "Adlai Chandrasekhar"
   :author "Josh Marchan"
@@ -17,10 +17,28 @@
   :depends-on (:chanl)
   :components ((:module "examples"
                         :components ((:file "package")
-                                     (:file "utils" :depends-on ("package"))
-                                     (:file "conditions" :depends-on ("utils"))
-                                     (:file "sieve" :depends-on ("utils"))
-                                     (:file "tk" :depends-on ("package"))))))
+                                     (:file "utils" :depends-on ("package"))))))
+
+(asdf:defsystem chanl.examples.conditions
+  :name "ChanL cross-thread conditions example"
+  :depends-on (:chanl.examples)
+  :components
+  ((:module "examples"
+            :components ((:file "conditions")))))
+
+(asdf:defsystem chanl.examples.sieve
+  :name "ChanL parallel sieve example"
+  :depends-on (:chanl-examples)
+  :components
+  ((:module "examples"
+            :components ((:file "sieve")))))
+
+(asdf:defsystem chanl.examples.ltk
+  :name "ChanL LTK example"
+  :depends-on (:ltk :chanl-examples)
+  :components
+  ((:module "examples"
+            :components ((:file "tk")))))
 
 (asdf:defsystem chanl-tests
   :name "chanl tests"
