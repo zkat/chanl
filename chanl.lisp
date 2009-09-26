@@ -146,17 +146,18 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 
 (defun send (channel obj)
   (with-accessors ((lock channel-lock)
-                   (send-ok channel-send-ok)
                    (recv-ok channel-recv-ok))
       channel
     (bt:with-recursive-lock-held (lock)
       (with-write-state (channel)
-        (loop
-           while (send-blocks-p channel)
-           do (bt:condition-wait send-ok lock)
-           finally (channel-insert-value channel obj))
+        (wait-to-send channel)
+        (channel-insert-value channel obj)
         (bt:condition-notify recv-ok)
         obj))))
+
+(defun wait-to-send (channel)
+  (loop while (send-blocks-p channel)
+     do (bt:condition-wait (channel-send-ok channel) (channel-lock channel))))
 
 (defun channel-insert-value (channel value)
   (if (channel-buffered-p channel)
@@ -171,16 +172,17 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 
 (defun recv (channel)
   (with-accessors ((lock channel-lock)
-                   (send-ok channel-send-ok)
-                   (recv-ok channel-recv-ok))
+                   (send-ok channel-send-ok))
       channel
     (bt:with-recursive-lock-held (lock)
       (with-read-state (channel)
         (bt:condition-notify send-ok)
-        (prog1 (loop
-                  while (recv-blocks-p channel)
-                  do (bt:condition-wait recv-ok lock)
-                  finally (return (channel-grab-value channel))))))))
+        (wait-to-recv channel)
+        (channel-grab-value channel)))))
+
+(defun wait-to-recv (channel)
+  (loop while (recv-blocks-p channel)
+     do (bt:condition-wait (channel-recv-ok channel) (channel-lock channel))))
 
 (defun channel-grab-value (channel)
   (if (channel-buffered-p channel)
