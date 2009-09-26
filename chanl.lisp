@@ -188,7 +188,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
         (prog1 (loop
                   while (recv-blocks-p channel)
                   do (bt:condition-wait recv-ok lock)
-                  finally (return (grab-channel-value channel))))))))
+                  finally (return (channel-grab-value channel))))))))
 
 (defun channel-grab-value (channel)
   (prog1 (channel-value channel)
