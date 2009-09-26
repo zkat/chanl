@@ -25,7 +25,7 @@
 (in-suite chanl)
 
 ;;; Hooking into ASDF
-(defmethod asdf:perform ((o asdf:test-op) (c (eql (asdf:find-system :chanl-tests))))
+(defmethod asdf:perform ((o asdf:test-op) (c (eql (asdf:find-system :chanl.tests))))
   (format t "~2&*******************~@
                 ** Starting test **~@
                 *******************~%")
