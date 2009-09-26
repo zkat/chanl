@@ -10,7 +10,8 @@
                         :components ((:file "package")
                                      (:file "utils" :depends-on ("package"))
                                      (:file "procs" :depends-on ("package"))
-                                     (:file "channels" :depends-on ("utils" "procs")))))
+                                     (:file "queues" :depends-on ("package"))
+                                     (:file "channels" :depends-on ("queues"))))))
 
 (asdf:defsystem chanl.examples
   :name "chanl examples"
