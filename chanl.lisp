@@ -28,14 +28,19 @@
   `(lambda (&optional _) (declare (ignorable _)) ,@body))
 
 ;;; Queue
-(defstruct (queue (:predicate queuep))
-  head tail)
+(defstruct (queue (:predicate queuep)
+                  (:constructor make-queue (size)))
+  head tail size)
 
 (defun queue-peek (queue)
   (car (queue-head queue)))
 
 (defun queue-empty-p (queue)
   (null (queue-head queue)))
+
+(defun queue-full-p (queue)
+  (= (length (queue-head queue))
+     (queue-size queue)))
 
 (defun queue-count (queue)
   (length (queue-head queue)))
