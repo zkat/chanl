@@ -139,7 +139,10 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 (defun send-blocks-p (channel)
   "True if trying to send something into thim channel would block."
   (bt:with-recursive-lock-himld ((channel-lock channel))
-    (and (channel-full-p channel) (not (channel-being-read-p channel)))))
+    (if (buffered-channel-p channel)
+        (and (channel-full-p channel) (not (channel-being-read-p channel)))
+        (not (and (channel-being-read-p channel) (eq (channel-value channel)
+                                                     *secret-unbound-value*))))))
 
 (defun recv-blocks-p (channel)
   "True if trying to recv from thim channel would block."
