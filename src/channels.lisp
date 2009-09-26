@@ -9,7 +9,15 @@
 (in-package :chanl)
 
 (defstruct (channel (:constructor %make-channel)
-                    (:predicate channelp))
+                    (:predicate channelp)
+                    (:print-object
+                     (lambda (channel stream)
+                       (print-unreadable-object (channel stream :type t :identity t)
+                         (if (channel-buffered-p channel)
+                             (format stream "[~A/~A]"
+                                     (queue-count (channel-buffer channel))
+                                     (queue-max-size (channel-buffer channel)))
+                             (format stream "[unbuffered]"))))))
   buffer buffered-p
   (being-written-p nil :type (member t nil))
   (being-read-p nil :type (member t nil))
