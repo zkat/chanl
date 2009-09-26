@@ -8,7 +8,7 @@
 
 (in-package :chanl)
 
-(setf *print-pretty* t)                 ; Horrible hack, just in case... - Adlai
+(setf *print-circle* t)                 ; Horrible hack, just in case... - Adlai
 
 (defun make-queue (length)
   "Creates a new queue of maximum size LENGTH"
