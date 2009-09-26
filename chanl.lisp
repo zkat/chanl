@@ -97,18 +97,8 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 ;;;
 (defvar *secret-unbound-value* (gensym "SECRETLY-UNBOUND-"))
 
-(defstruct (channel (:constructor %make-channel)
-                    (:predicate channelp)
-                    (:print-object
-                     (lambda (channel stream)
-                       (print-unreadable-object (channel stream :type t :identity t)
-                         (if (channel-buffer channel)
-                             (format stream "[Buffered: ~A/~A]"
-                                     (queue-count (channel-buffer channel))
-                                     (queue-size (channel-buffer channel)))
-                             (format stream "[Unbuffered, ~:[input available~;no input~]]"
-                                     (recv-blocks-p channel)))))))
-  (value *secret-unbound-value*)
+(defstruct (channel (:constructor %make-channel (buffer))
+                    (:predicate channelp))
   buffer
   (being-written-p nil :type (member t nil))
   (being-read-p nil :type (member t nil))
@@ -116,10 +106,12 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
   (send-ok (bt:make-condition-variable) :read-only t)
   (recv-ok (bt:make-condition-variable) :read-only t))
 
-(defun make-channel (&optional buffer-size)
-  (if buffer-size
-      (%make-channel :buffer (make-queue buffer-size))
-      (%make-channel)))
+(defun make-channel (&optional (buffer-size 0))
+  (when (< buffer-size 0)
+    (error "buffer size cannot be negative."))
+  (if (< buffer-size 0)
+      (%make-channel (make-queue buffer-size))
+      (%make-channel *secret-unbound-value*)))
 
 (defun buffered-channel-p (channel)
   (when (channel-buffer channel) t))
