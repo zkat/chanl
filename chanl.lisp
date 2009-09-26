@@ -152,6 +152,12 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
       (bt:condition-notify recv-ok)
       obj)))
 
+(defmacro with-read-state ((channel) &body body)
+  `(unwind-protect
+        (progn (setf (channel-being-read ,channel) t)
+               ,@body)
+     (setf (channel-being-read ,channel) nil)))
+
 (defun recv (channel)
   (with-accessors ((buffer channel-buffer)
                    (chan-empty-p channel-empty-p)
@@ -161,14 +167,12 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
                    (recv-ok channel-recv-ok))
       channel
     (bt:with-lock-held (lock)
-      (unwind-protect
-           (progn (setf being-read-p t)
-                  (bt:condition-notify send-ok)
-                  (prog1 (loop
-                            while chan-empty-p
-                            do (bt:condition-wait recv-ok lock)
-                            finally (return (dequeue buffer)))))
-        (setf being-read-p nil)))))
+      (with-read-state (channel)
+        (bt:condition-notify send-ok)
+        (prog1 (loop
+                  while chan-empty-p
+                  do (bt:condition-wait recv-ok lock)
+                  finally (return (dequeue buffer))))))))
 
 ;;;
 ;;; Selecting channels
