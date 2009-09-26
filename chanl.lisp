@@ -126,8 +126,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 
 (defun channel-full-p (channel)
   (if (buffered-channel-p channel)
-      (or (not (eq *secret-unbound-value* (channel-value channel)))
-          (queue-full-p (channel-buffer channel)))
+      (queue-full-p (channel-buffer channel))
       t))
 
 (defun channel-empty-p (channel)
