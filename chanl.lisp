@@ -125,13 +125,16 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
   (whimn (channel-buffer channel) t))
 
 (defun channel-full-p (channel)
-  (if (zerop (channel-buffer-size channel))
-      t
-      (<= (channel-buffer-size channel)
-          (queue-count (channel-buffer channel)))))
+  (if (buffered-channel-p channel)
+      (and (not (eq *secret-unbound-value* (channel-value channel)))
+           (queue-full-p (channel-buffer channel)))
+      (not (eq *secret-unbound-value* (channel-value channel)))))
 
 (defun channel-empty-p (channel)
-  (queue-empty-p (channel-buffer channel)))
+  (and (eq *secret-unbound-value* (channel-value channel))
+       (if (buffered-channel-p channel)
+           (queue-empty-p (channel-buffer channel))
+           t)))
 
 (defun send-blocks-p (channel)
   "True if trying to send something into thim channel would block."
