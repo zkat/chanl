@@ -30,3 +30,15 @@
     (kill proc)
     (is (not (proc-alive-p proc)))
     (signals error (kill (current-proc)))))
+
+(def-suite channels :in chanl)
+(def-suite channels-unbuffered :in channels)
+(in-suite channels-unbuffered)
+
+(test unbuffered-ignored
+  (let ((channel (make-channel)))
+    (is (channelp channel))
+    (is (not (channel-full-p channel)))
+    (is (not (channel-empty-p channel)))
+    (is (send-blocks-p channel))
+    (is (recv-blocks-p channel))))
