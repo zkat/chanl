@@ -128,21 +128,17 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
   (if (buffered-channel-p channel)
       (or (not (eq *secret-unbound-value* (channel-value channel)))
           (queue-full-p (channel-buffer channel)))
-      (not (eq *secret-unbound-value* (channel-value channel)))))
+      t))
 
 (defun channel-empty-p (channel)
-  (and (eq *secret-unbound-value* (channel-value channel))
-       (if (buffered-channel-p channel)
-           (queue-empty-p (channel-buffer channel))
-           t)))
+  (if (buffered-channel-p channel)
+      (queue-empty-p (channel-buffer channel))
+      t))
 
 (defun send-blocks-p (channel)
   "True if trying to send something into the channel would block."
   (bt:with-recursive-lock-held ((channel-lock channel))
-    (if (buffered-channel-p channel)
-        (and (channel-full-p channel) (not (channel-being-read-p channel)))
-        (not (and (channel-being-read-p channel) (eq (channel-value channel)
-                                                     *secret-unbound-value*))))))
+    (and (channel-full-p channel) (not (channel-being-read-p channel)))))
 
 (defun recv-blocks-p (channel)
   "True if trying to recv from the channel would block."
