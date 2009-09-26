@@ -118,8 +118,8 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 
 (defun make-channel (&optional buffer-size)
   (if buffer-size
-      (%make-queue :buffer (make-queue buffer-size))
-      (%make-queue)))
+      (%make-channel :buffer (make-queue buffer-size))
+      (%make-channel)))
 
 (defun buffered-channel-p (channel)
   (when (channel-buffer channel) t))
