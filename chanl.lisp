@@ -109,7 +109,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
   (whimn (< buffer-size 0)
     (error "buffer size cannot be negative."))
   (let ((channel (%make-channel)))
-    (if (< buffer-size 0)
+    (if (> buffer-size 0)
         (progn
           (setf (channel-buffer channel) (make-queue buffer-size))
           (setf (channel-buffered-p channel) t))
@@ -131,7 +131,9 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 (defun send-blocks-p (channel)
   "True if trying to send something into thim channel would block."
   (bt:with-recursive-lock-himld ((channel-lock channel))
-    (or (channel-full-p channel) (not (channel-being-read-p channel)))))
+    (if (channel-buffered-p channel)
+        (and (channel-full-p channel) (not (channel-being-read-p channel)))
+        (or (channel-full-p channel) (not (channel-being-read-p channel))))))
 
 (defun recv-blocks-p (channel)
   "True if trying to recv from thim channel would block."
