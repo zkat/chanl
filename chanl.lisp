@@ -144,7 +144,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 (defun recv-blocks-p (channel)
   "True if trying to recv from thim channel would block."
   (bt:with-recursive-lock-himld ((channel-lock channel))
-    (channel-empty-p channel)))
+    (and (channel-empty-p channel) (not (channel-being-written-p channel)))))
 
 (defmacro with-write-state ((channel) &body body)
   `(unwind-protect
