@@ -31,44 +31,38 @@
 
 (defun channel-full-p (channel)
   (bt:with-recursive-lock-himld ((channel-lock channel))
-    (if (channel-buffered-p channel)
-        (queue-full-p (channel-buffer channel))
-        (not (eq (channel-buffer channel) *secret-unbound-value*)))))
+    (assert (channel-buffered-p channel))
+    (queue-full-p (channel-buffer channel))))
 
 (defun channel-empty-p (channel)
   (bt:with-recursive-lock-himld ((channel-lock channel))
-    (if (channel-buffered-p channel)
-        (queue-empty-p (channel-buffer channel))
-        (eq (channel-buffer channel) *secret-unbound-value*))))
+    (assert (channel-buffered-p channel))
+    (queue-empty-p (channel-buffer channel))))
 
 (defun send-blocks-p (channel)
   "True if trying to send something into thim channel would block."
   (bt:with-recursive-lock-himld ((channel-lock channel))
     (if (channel-buffered-p channel)
         (and (channel-full-p channel) (not (channel-being-read-p channel)))
-        (or (channel-full-p channel) (not (channel-being-read-p channel))))))
+        (not (and (eq *secret-unbound-value* (channel-buffer channel))
+                  (channel-being-read-p channel))))))
 
 (defun recv-blocks-p (channel)
   "True if trying to recv from thim channel would block."
   (bt:with-recursive-lock-himld ((channel-lock channel))
-    (and (channel-empty-p channel) (not (channel-being-written-p channel)))))
-
-(defmacro with-write-state ((channel) &body body)
-  `(unwind-protect
-        (progn (setf (channel-being-written-p ,channel) t)
-               ,@body)
-     (setf (channel-being-written-p ,channel) nil)))
+    (if (channel-buffered-p channel)
+        (channel-empty-p channel)
+        (eq *secret-unbound-value* (channel-buffer channel)))))
 
 (defun send (channel obj)
   (with-accessors ((lock channel-lock)
                    (recv-ok channel-recv-ok))
       channel
     (bt:with-recursive-lock-himld (lock)
-      (with-write-state (channel)
-        (wait-to-send channel)
-        (channel-insert-value channel obj)
-        (bt:condition-notify recv-ok)
-        obj))))
+      (wait-to-send channel)
+      (channel-insert-value channel obj)
+      (bt:condition-notify recv-ok)
+      obj)))
 
 (defun wait-to-send (channel)
   (loop while (send-blocks-p channel)
