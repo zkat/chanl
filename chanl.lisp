@@ -144,7 +144,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
   `(unwind-protect
         (progn (setf (channel-being-written-p ,channel) t)
                ,@body)
-     (setf (channel-being-written-p ,channel) nil))  )
+     (setf (channel-being-written-p ,channel) nil)))
 
 (defun send (channel obj)
   (with-accessors ((chan-full-p channel-full-p)
