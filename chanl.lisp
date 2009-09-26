@@ -162,7 +162,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
         (loop
            while (send-blocks-p channel)
            do (bt:condition-wait send-ok lock)
-           finally (channel-insert-value channel))
+           finally (channel-insert-value channel obj))
         (bt:condition-notify recv-ok)
         obj))))
 
