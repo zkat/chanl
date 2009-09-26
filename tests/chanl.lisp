@@ -9,8 +9,7 @@
 (in-suite chanl)
 
 (test queue
-  (let ((queue (make-queue 0)))
-    (is (queuep queue))
+  (let ((queue (make-queue 2)))
     (is (queue-empty-p queue))
     (is (eq 5 (enqueue 5 queue)))
     (is (not (queue-empty-p queue)))
@@ -43,26 +42,22 @@
 
 (test unbuffered-recv-context
   (let* ((channel (make-channel))
-         (proc (pexec () (recv channel))))
+         (procs (loop repeat 20 collect (pexec () (recv channel)))))
     (unwind-protect
          (progn
-           (loop :until (find proc (all-procs))
-              :finally (sleep 1))
            (is (not (channel-full-p channel)))
            (is (channel-empty-p channel))
            (is (not (send-blocks-p channel)))
            (is (recv-blocks-p channel)))
-      (kill proc))))
+      (mapcar 'kill procs))))
 
 (test unbuffered-send-context
   (let* ((channel (make-channel))
-         (proc (pexec () (send channel nil))))
+         (procs (loop repeat 20 collect (pexec () (send channel nil)))))
     (unwind-protect
          (progn
-           (loop :until (find proc (all-procs))
-              :finally (sleep 1))
            (is (not (channel-full-p channel)))
            (is (channel-empty-p channel))
            (is (send-blocks-p channel))
            (is (not (recv-blocks-p channel))))
-      (kill proc))))
+      (mapcar 'kill procs))))
