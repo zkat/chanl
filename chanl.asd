@@ -7,7 +7,8 @@
   :description "Communicating Sequential Process support for Common Lisp"
   :depends-on (:bordeaux-threads)
   :components ((:module "src"
-                        :components ((:file "channels" :depends-on ("package")))))
+                        :components ((:file "package")
+                                     (:file "channels" :depends-on ("package")))))
 
 (asdf:defsystem chanl.examples
   :name "chanl examples"
