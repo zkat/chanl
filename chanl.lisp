@@ -137,8 +137,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
     (channel-empty-p channel)))
 
 (defun send (channel obj)
-  (with-accessors ((buffer channel-buffer)
-                   (chan-full-p channel-full-p)
+  (with-accessors ((chan-full-p channel-full-p)
                    (being-read-p channel-being-read-p)
                    (lock channel-lock)
                    (send-ok channel-send-ok)
@@ -148,9 +147,12 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
       (loop
          while (and chan-full-p (not being-read-p))
          do (bt:condition-wait send-ok lock)
-         finally (enqueue obj buffer))
+         finally (channel-insert-value channel))
       (bt:condition-notify recv-ok)
       obj)))
+
+(defun channel-insert-value (channel value)
+  (enqueue value (channel-buffer value)))
 
 (defmacro with-read-state ((channel) &body body)
   `(unwind-protect
