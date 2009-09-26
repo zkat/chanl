@@ -43,7 +43,7 @@
 (asdf:defsystem chanl.tests
   :name "chanl tests"
   :description "Unit Tests for the ChanL library and its examples"
-  :depends-on (:chanl :eos :chanl-examples)
+  :depends-on (:chanl :eos :chanl.examples)
   :components ((:module "tests"
                         :components ((:file "setup-tests")
                                      (:file "chanl" :depends-on ("setup-tests"))
