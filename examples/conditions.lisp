@@ -5,8 +5,8 @@
 ;;;; Condition handling through channels
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(in-package :chanl-examples)
+(in-package :chanl.examples)
+(export '(with-condition-dumper))
 
 (defun ensure-list (x) (if (listp x) x (list x))) ; Common util
 

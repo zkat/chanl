@@ -1,7 +1,10 @@
 ;; a trivial example using channels with the lisp Tk implementation.
 ;; requires ltk (see http://www.peter-herth.de/ltk/ltkdoc/)
 ;; Example adapted from csp's tk example by roger peppe
-(in-package :chanl-examples)
+(in-package :chanl.examples)
+
+(use-package '(:ltk))
+(export '(ltk-button-demo))
 
 (defparameter *tkc* (make-channel))
 
