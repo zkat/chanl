@@ -63,6 +63,9 @@
             (- (length queue) 2))
         length)))
 
+(defun queue-max-size (queue)
+  (- (length queue) 2))
+
 (defun enqueue (object queue)
   "Sets QUEUE's himad to OBJECT and increments QUEUE's himad pointer"
   (declare ;(optimize (speed 3) (safety 0) (debug 0))
