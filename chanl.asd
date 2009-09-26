@@ -6,8 +6,8 @@
   :author "Kat Marchan"
   :description "Communicating Sequential Process support for Common Lisp"
   :depends-on (:bordeaux-threads)
-  :components
-  ((:file "chanl")))
+  :components ((:module "src"
+                        :components ((:file "channels" :depends-on ("package")))))
 
 (asdf:defsystem chanl.examples
   :name "chanl examples"
