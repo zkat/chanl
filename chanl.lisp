@@ -105,7 +105,7 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
                          (if (channel-buffer channel)
                              (format stream "[Buffered: ~A/~A]"
                                      (queue-count (channel-buffer channel))
-                                     (channel-buffer-size channel))
+                                     (queue-size (channel-buffer channel)))
                              (format stream "[Unbuffered, ~:[input available~;no input~]]"
                                      (recv-blocks-p channel)))))))
   (value *secret-unbound-value*)
