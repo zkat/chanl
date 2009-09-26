@@ -131,12 +131,12 @@ Bordeaux-Threads documentation for more information on INITIAL-BINDINGS."
 (defun send-blocks-p (channel)
   "True if trying to send something into the channel would block."
   (bt:with-recursive-lock-held ((channel-lock channel))
-    (and (channel-full-p channel) (not (channel-being-read-p channel)))))
+    (or (channel-full-p channel) (not (channel-being-read-p channel)))))
 
 (defun recv-blocks-p (channel)
   "True if trying to recv from the channel would block."
   (bt:with-recursive-lock-held ((channel-lock channel))
-    (and (channel-empty-p channel) (not (channel-being-written-p channel)))))
+    (or (channel-empty-p channel) (not (channel-being-written-p channel)))))
 
 (defmacro with-write-state ((channel) &body body)
   `(unwind-protect
