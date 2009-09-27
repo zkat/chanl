@@ -12,9 +12,8 @@
   "This macro puts the FUN back in FUNCTION."
   `(lambda (&optional _) (declare (ignorable _)) ,@body))
 
-(defmacro define-speedy-function (name args typespec &body body)
+(defmacro define-speedy-function (name args &body body)
   `(progn (declaim (inline ,name))
           (defun ,name ,args
-            (declare (optimize (speed 3) (safety 0) (debug 0))
-                     (type ,@typespec))
+            (declare (optimize (speed 3) (safety 0) (debug 0)))
             ,@body)))
