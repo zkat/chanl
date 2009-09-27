@@ -36,13 +36,13 @@
        (svref queue 1))))
 
 (define-speedy-function queue-empty-p (queue)
-    (type simple-vector queue)
+    (simple-vector queue)
   "Checks whether QUEUE's effective length is zero"
   (and (queue-zero-p queue)
        (eq (queue-peek queue) '#.queue-sentinel)))
 
 (define-speedy-function queue-full-p (queue)
-    (type simple-vector queue)
+    (simple-vector queue)
   "Checks whether QUEUE is effectively full"
   (and (queue-zero-p queue)
        (not (eq (queue-peek queue) '#.queue-sentinel))))
@@ -50,9 +50,10 @@
 (define-speedy-function queue-count (queue)
     (simple-vector queue)
   "Returns QUEUE's effective length"
-  (let ((length (mod (- (svref queue 1)
-                        (svref queue 0))
-                     (- (length queue) 2))))
+  (let ((length (the fixnum
+                  (mod (- (the fixnum (svref queue 1))
+                          (the fixnum (svref queue 0)))
+                       (- (length queue) 2)))))
     (if (zerop length)
         (if (eq (queue-peek queue) '#.queue-sentinel) 0
             (- (length queue) 2))
@@ -70,13 +71,15 @@
                        (svref queue 1)))
         object
         (svref queue 1)
-        (+ 2 (mod (1- (svref queue 1))
-                  (- (length queue) 2))))
+        (the fixnum (+ 2 (mod (1- (the fixnum (svref queue 1)))
+                              (- (length queue) 2)))))
   object)
 
 (define-speedy-function dequeue (queue)
     (simple-vector queue)
   "Sets QUEUE's tail to QUEUE, increments QUEUE's tail pointer, and returns the previous tail ref"
   (prog1 (svref queue (svref queue 0))
-    (setf (svref queue 0) (+ 2 (mod (1- (svref queue 0)) (- (length queue) 2))))
+    (setf (svref queue 0)
+          (the fixnum (+ 2 (mod (1- (the fixnum (svref queue 0)))
+                                (- (length queue) 2)))))
     (when (queue-zero-p queue) (setf (svref queue (svref queue 0)) '#.queue-sentinel))))
