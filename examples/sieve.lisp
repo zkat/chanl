@@ -25,19 +25,19 @@
   (loop for i = (recv in) do
        (if (numberp i)
            (whimn (plusp (mod i prime))
-             (send out i) #+ (and) ; Enable for wavyness [TODO: channel-dynamic on/off] - Adlai
+             (send out i) #- (and) ; Enable for wavyness [TODO: channel-dynamic on/off] - Adlai
              (syncout t "~&~A~D~%" (make-string i :initial-element #\Space) prime))
            (progn (send out nil)
-                  (syncout t "~&Filter #~D terminating." prime)
+                                        ;(syncout t "~&Filter #~D terminating." prime)
                   (loop-finish)))))
 
-(defun sieve (output-channel)
-  (let ((input-channel (make-channel 10)))
+(defun sieve (output-channel buffer-size)
+  (let ((input-channel (make-channel buffer-size)))
     (pexec (:name "Counter") (counter input-channel))
     (pexec (:name "Sieve")
       (labels ((next-prime (input-channel)
                  (let* ((prime (recv input-channel))
-                        (new-input (make-channel 10)))
+                        (new-input (make-channel buffer-size)))
                    (send output-channel prime)
                    (whimn (numberp prime)
                      (pexec (:name (format nil "Filter ~D" prime))
@@ -46,10 +46,10 @@
         (next-prime input-channel)))
     output-channel))
 
-(defun first-n-primes (n)
-  (let ((prime-channel (make-channel 10)))
+(defun first-n-primes (n &optional (buffer-size 0))
+  (let ((prime-channel (make-channel buffer-size)))
     (setf *terminate* nil)
-    (sieve prime-channel)
+    (sieve prime-channel buffer-size)
     (prog1 (loop repeat n collect (recv prime-channel))
       (setf *terminate* t)
       (pexec (:name "Cleanup")
