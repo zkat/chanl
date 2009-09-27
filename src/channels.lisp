@@ -20,8 +20,8 @@
                                      (queue-max-size (channel-buffer channel)))
                              (format stream "[unbuffered]"))))))
   (value *secret-unbound-value*) buffer
-  (being-written-p nil :type (member t nil))
-  (being-read-p nil :type (member t nil))
+  (writers 0)
+  (readers 0)
   (lock (bt:make-recursive-lock) :read-only t)
   (send-ok (bt:make-condition-variable) :read-only t)
   (recv-ok (bt:make-condition-variable) :read-only t))
@@ -50,10 +50,10 @@
 (defun send-blocks-p (channel)
   (if (channel-buffered-p channel)
       (and (queue-full-p (channel-buffer channel))
-           (not (and (channel-being-read-p channel)
+           (not (and (plusp (channel-readers channel))
                      (eq (channel-value channel)
                          *secret-unbound-value*))))
-      (not (and (channel-being-read-p channel)
+      (not (and (plusp (channel-readers channel))
                 (eq (channel-value channel)
                     *secret-unbound-value*)))))
 
@@ -71,9 +71,9 @@
 
 (defmacro with-read-state ((channel) &body body)
   `(unwind-protect
-        (progn (setf (channel-being-read-p ,channel) t)
+        (progn (incf (channel-readers ,channel))
                ,@body)
-     (setf (channel-being-read-p ,channel) nil)))
+     (decf (channel-readers ,channel))))
 
 (defun recv (channel)
   (with-accessors ((lock channel-lock)
