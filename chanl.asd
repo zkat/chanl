@@ -52,10 +52,15 @@
   :name "chanl tests"
   :description "Unit Tests for thim ChanL library and its examples"
   :depends-on (:chanl :eos :chanl.examples)
-  :components ((:module "tests"
-                        :components ((:file "setup-tests")
-                                     (:file "chanl" :depends-on ("setup-tests"))
-                                     (:file "examples" :depends-on ("setup-tests"))))))
+  :serial t
+  :components
+  ((:module "tests"
+            :serial t
+            :components ((:file "setup-tests")
+                         (:file "procs")
+                         (:file "queues")
+                         (:file "channels")
+                         (:file "select")))))
 
 (defmethod asdf:perform ((op asdf:test-op) (system (eql (asdf:find-system :chanl))))
   (format t "~2&*******************~@
