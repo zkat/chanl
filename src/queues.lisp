@@ -71,16 +71,16 @@
       ;; Is there a real value at the head pointer?
       (not (eq (svref queue head) '#.queue-sentinel)))))
 
-(define-speedy-function queue-count (queue)
+(defun queue-count (queue)
   "Returns QUEUE's effective length"
-  (let ((length (the fixnum
-                  (mod (- (the fixnum (svref queue 1))
-                          (the fixnum (svref queue 0)))
-                       (- (length queue) 2)))))
-    (if (zerop length)
-        (if (eq (queue-peek queue) '#.queue-sentinel) 0
-            (- (length queue) 2))
-        length)))
+  ;; We start with the 'raw' length -- the difference between the pointers
+  (let ((length (- (queue-tail queue) (queue-head queue))))
+    (cond ((plusp length) length)                ; Raw length is OK
+          ((or (minusp length)                   ; Tail pointer is before head pointer,
+               (not (eq (queue-peek queue)       ;   or the queue is full if the pointers
+                        '#.queue-sentinel)))     ;   don't point to the sentinel value, so
+           (+ length (queue-max-size queue)))    ; Add the effective length
+          (t 0))))                               ; Queue is empty -- return zero
 
 (define-speedy-function queue-max-size (queue)
   "Returns QUEUE's maximum length"
