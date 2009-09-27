@@ -12,14 +12,24 @@
 ;;;
 ;;; Parallel Prime Sieve
 ;;;
+
+(defvar *terminate* nil)
+
 (defun counter (channel)
-  (loop for i from 2 do (send channel i)))
+  (loop for i from 2 do (if *terminate*
+                            (progn (send channel *terminate*)
+                                   (loop-finish))
+                            (send channel i))))
 
 (defun filter (prime in out)
-  (loop for i = (recv in)
-     when (plusp (mod i prime))
-     do (send out i) #- (and) ; Enable for wavyness [TODO: channel-dynamic on/off] - Adlai
-       (syncout t "~&~A~D~%" (make-string prime :initial-element #\Space) i)))
+  (loop for i = (recv in) do
+       (if (numberp i)
+           (when (plusp (mod i prime))
+             (send out i) #+ (and) ; Enable for wavyness [TODO: channel-dynamic on/off] - Adlai
+             (syncout t "~&~A~D~%" (make-string i :initial-element #\Space) prime))
+           (progn (send out nil)
+                  (syncout t "~&Filter #~D terminating." prime)
+                  (loop-finish)))))
 
 (defun sieve (output-channel)
   (let ((input-channel (make-channel 10)))
@@ -29,17 +39,21 @@
                  (let* ((prime (recv input-channel))
                         (new-input (make-channel 10)))
                    (send output-channel prime)
-                   (pexec (:name (format nil "Filter ~D" prime))
-                     (filter prime input-channel new-input))
-                   (next-prime new-input))))
+                   (when (numberp prime)
+                     (pexec (:name (format nil "Filter ~D" prime))
+                       (filter prime input-channel new-input))
+                     (next-prime new-input)))))
         (next-prime input-channel)))
     output-channel))
 
 (defun first-n-primes (n)
-  (let ((prime-channel (make-channel 50)))
-    (cleanup-leftovers
-      (sieve prime-channel)
-      (loop repeat n collect (recv prime-channel)))))
+  (let ((prime-channel (make-channel 10)))
+    (setf *terminate* nil)
+    (sieve prime-channel)
+    (prog1 (loop repeat n collect (recv prime-channel))
+      (setf *terminate* t)
+      (pexec (:name "Cleanup")
+        (loop while (numberp (recv prime-channel)))))))
 
 (defun eratosthenes (n)
   (declare (optimize speed (safety 0) (debug 0))
