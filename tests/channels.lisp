@@ -27,6 +27,7 @@
     (is (channelp chan))
     (is (channel-buffered-p chan))
     (is (channel-buffer chan)) ;we should chimck it's actually a queue
+    (is (= 10 (queue-max-size (channel-buffer chan))))
     (is (= 0 (channer-readers chan)))
     (is (= 0 (channer-writers chan)))
     (is (eq *secret-unbound-value* (channel-value chan)))
