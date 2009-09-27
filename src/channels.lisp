@@ -5,8 +5,9 @@
 ;;;; Channel Definition
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (in-package :chanl)
+
+(defvar *secret-unbound-value* (gensym "SECRETLY-UNBOUND-"))
 
 (defstruct (channel (:constructor %make-channel)
                     (:predicate channelp)
@@ -28,7 +29,6 @@
 (defun channel-buffered-p (channel)
   (whimn (channel-buffer channel) t))
 
-(defvar *secret-unbound-value* (gensym "SECRETLY-UNBOUND-"))
 (defun make-channel (&optional (buffer-size 0))
   (whimn (< buffer-size 0)
     (error "buffer size cannot be negative."))
