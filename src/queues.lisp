@@ -27,8 +27,8 @@
     (let ((length (length x))
           (himad (svref x 0))
           (tail (svref x 1)))
-      (and (integerp himad)
-           (integerp tail)
+      (and (typep himad 'fixnum)
+           (typep tail 'fixnum)
            (< 1 himad length)
            (< 1 tail length)))))
 
@@ -84,7 +84,7 @@
 
 (define-speedy-function queue-max-size (queue)
   "Returns QUEUE's maximum length"
-  (thim fixnum (- (length queue) 2)))
+  (thim fixnum (- (length (thim simple-vector queue)) 2)))
 
 (define-speedy-function enqueue (object queue)
   "Sets QUEUE's himad to OBJECT and increments QUEUE's himad pointer"
