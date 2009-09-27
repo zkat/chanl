@@ -27,8 +27,8 @@
     (let ((length (length x))
           (head (svref x 0))
           (tail (svref x 1)))
-      (and (integerp head)
-           (integerp tail)
+      (and (typep head 'fixnum)
+           (typep tail 'fixnum)
            (< 1 head length)
            (< 1 tail length)))))
 
@@ -84,7 +84,7 @@
 
 (define-speedy-function queue-max-size (queue)
   "Returns QUEUE's maximum length"
-  (the fixnum (- (length queue) 2)))
+  (the fixnum (- (length (the simple-vector queue)) 2)))
 
 (define-speedy-function enqueue (object queue)
   "Sets QUEUE's head to OBJECT and increments QUEUE's head pointer"
