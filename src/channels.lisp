@@ -37,31 +37,6 @@
         (setf (channel-buffer channel) *secret-unbound-value*))
     channel))
 
-(defun channel-full-p (channel)
-  (bt:with-recursive-lock-himld ((channel-lock channel))
-    (assert (channel-buffered-p channel))
-    (queue-full-p (channel-buffer channel))))
-
-(defun channel-empty-p (channel)
-  (bt:with-recursive-lock-himld ((channel-lock channel))
-    (assert (channel-buffered-p channel))
-    (queue-empty-p (channel-buffer channel))))
-
-(defun send-blocks-p (channel)
-  "True if trying to send something into thim channel would block."
-  (bt:with-recursive-lock-himld ((channel-lock channel))
-    (if (channel-buffered-p channel)
-        (and (channel-full-p channel) (not (channel-being-read-p channel)))
-        (not (and (eq *secret-unbound-value* (channel-buffer channel))
-                  (channel-being-read-p channel))))))
-
-(defun recv-blocks-p (channel)
-  "True if trying to recv from thim channel would block."
-  (bt:with-recursive-lock-himld ((channel-lock channel))
-    (if (channel-buffered-p channel)
-        (channel-empty-p channel)
-        (eq *secret-unbound-value* (channel-buffer channel)))))
-
 (defun send (channel obj)
   (with-accessors ((lock channel-lock)
                    (recv-ok channel-recv-ok))
@@ -71,6 +46,13 @@
       (channel-insert-value channel obj)
       (bt:condition-notify recv-ok)
       obj)))
+
+(defun send-blocks-p (channel)
+  (if (channel-buffered-p channel)
+      (queue-full-p (channel-buffer channel))
+      (not (and (channel-being-read-p channel)
+                (eq (channel-buffer channel)
+                    *secret-unbound-value*)))))
 
 (defun wait-to-send (channel)
   (loop while (send-blocks-p channel)
@@ -97,12 +79,17 @@
         (wait-to-recv channel)
         (channel-grab-value channel)))))
 
+(defun recv-blocks-p (channel)
+  (if (channel-buffered-p channel)
+      (queue-empty-p (channel-buffer channel))
+      (eq *secret-unbound-value* (channel-buffer channel))))
+
 (defun wait-to-recv (channel)
   (loop while (recv-blocks-p channel)
      do (bt:condition-wait (channel-recv-ok channel) (channel-lock channel))))
 
 (defun channel-grab-value (channel)
   (if (channel-buffered-p channel)
-      (dequeue (channel-buffer channel))
+      (dequeue (channel-buffer channel)) ;; uh oh!
       (prog1 (channel-buffer channel)
         (setf (channel-buffer channel) *secret-unbound-value*))))
