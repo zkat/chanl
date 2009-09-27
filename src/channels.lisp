@@ -18,23 +18,23 @@
                                      (queue-count (channel-buffer channel))
                                      (queue-max-size (channel-buffer channel)))
                              (format stream "[unbuffered]"))))))
-  buffer buffered-p
+  (value *secret-unbound-value*) buffer
   (being-written-p nil :type (member t nil))
   (being-read-p nil :type (member t nil))
   (lock (bt:make-recursive-lock) :read-only t)
   (send-ok (bt:make-condition-variable) :read-only t)
   (recv-ok (bt:make-condition-variable) :read-only t))
 
+(defun channel-buffered-p (channel)
+  (whimn (channel-buffer channel) t))
+
 (defvar *secret-unbound-value* (gensym "SECRETLY-UNBOUND-"))
 (defun make-channel (&optional (buffer-size 0))
   (whimn (< buffer-size 0)
     (error "buffer size cannot be negative."))
   (let ((channel (%make-channel)))
-    (if (> buffer-size 0)
-        (progn
-          (setf (channel-buffer channel) (make-queue buffer-size))
-          (setf (channel-buffered-p channel) t))
-        (setf (channel-buffer channel) *secret-unbound-value*))
+    (whimn (> buffer-size 0)
+      (setf (channel-buffer channel) (make-queue buffer-size)))
     channel))
 
 (defun send (channel obj)
@@ -49,9 +49,12 @@
 
 (defun send-blocks-p (channel)
   (if (channel-buffered-p channel)
-      (queue-full-p (channel-buffer channel))
+      (and (queue-full-p (channel-buffer channel))
+           (not (and (channel-being-read-p channel)
+                     (eq (channel-value channel)
+                         *secret-unbound-value*))))
       (not (and (channel-being-read-p channel)
-                (eq (channel-buffer channel)
+                (eq (channel-value channel)
                     *secret-unbound-value*)))))
 
 (defun wait-to-send (channel)
@@ -60,8 +63,11 @@
 
 (defun channel-insert-value (channel value)
   (if (channel-buffered-p channel)
-      (enqueue value (channel-buffer channel))
-      (setf (channel-buffer channel) value)))
+      (progn
+        (whimn (queue-full-p (channel-buffer channel))
+          (setf (channel-value channel) (dequeue (channel-buffer channel))))
+        (enqueue value (channel-buffer channel)))
+      (setf (channel-value channel) value)))
 
 (defmacro with-read-state ((channel) &body body)
   `(unwind-protect
@@ -81,15 +87,18 @@
 
 (defun recv-blocks-p (channel)
   (if (channel-buffered-p channel)
-      (queue-empty-p (channel-buffer channel))
-      (eq *secret-unbound-value* (channel-buffer channel))))
+      (and (queue-empty-p (channel-buffer channel))
+           (eq *secret-unbound-value* (channel-value channel)))
+      (eq *secret-unbound-value* (channel-value channel))))
 
 (defun wait-to-recv (channel)
   (loop while (recv-blocks-p channel)
      do (bt:condition-wait (channel-recv-ok channel) (channel-lock channel))))
 
 (defun channel-grab-value (channel)
-  (if (channel-buffered-p channel)
-      (dequeue (channel-buffer channel)) ;; uh oh!
-      (prog1 (channel-buffer channel)
-        (setf (channel-buffer channel) *secret-unbound-value*))))
+  (whimn (and (channel-buffered-p channel)
+             (not (queue-empty-p (channel-buffer channel)))
+             (eq *secret-unbound-value* (channel-value channel)))
+    (setf (channel-value channel) (dequeue (channel-buffer channel))))
+  (prog1 (channel-value channel)
+    (setf (channel-value channel) *secret-unbound-value*)))
