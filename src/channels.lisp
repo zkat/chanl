@@ -25,6 +25,7 @@
                              (format stream "[unbuffered]"))))))
   (value *secret-unbound-value*) buffer
   (readers 0) ; number of readers currently trying to read
+  (writers 0)
   (lock (bt:make-recursive-lock) :read-only t)
   (send-ok (bt:make-condition-variable) :read-only t)
   (recv-ok (bt:make-condition-variable) :read-only t))
@@ -45,14 +46,21 @@
 ;;;
 
 ;;; Sending
+(defmacro with-write-state ((channel) &body body)
+  `(unwind-protect
+        (progn (incf (channel-writers ,channel))
+               ,@body)
+     (decf (channel-writers ,channel))))
+
 (defun send (channel obj)
   (with-accessors ((lock channel-lock)
                    (recv-ok channel-recv-ok))
       channel
     (bt:with-recursive-lock-held (lock)
-      (wait-to-send channel)
-      (channel-insert-value channel obj)
-      (bt:condition-notify recv-ok) ; wake up a sleeping reader
+      (with-write-state (channel)
+        (wait-to-send channel))
+      (bt:condition-notify recv-ok)
+      (channel-insert-value channel obj) ; wake up a sleeping reader
       obj)))
 
 (defun wait-to-send (channel)
@@ -116,19 +124,26 @@
         (wait-to-recv channel)
         (channel-grab-value channel)))))
 
-(defun recv-blocks-p (channel)
-  ;; Again with the sentinel... This code could be cleaned up, but the reality of
-  ;; the matter is that trying to stuff both buffered and unbuffered channels into
-  ;; a single struct has caused quite a bit of ugliness. -- sykopomp
+(defun %recv-blocks-p (channel)
+  ;; The reason for this kludge is a bit complicated. Basically, we need a special
+  ;; form of recv-blocks-p to use internally that doesn't check the number of writers.
+  ;; If we check the writers here, we end up not releasing the lock and letting SEND
+  ;; do its thing before we keep going forward.
   (if (channel-buffered-p channel)
       (and (queue-empty-p (channel-buffer channel))
            (eq *secret-unbound-value* (channel-value channel)))
-      (eq *secret-unbound-value* (channel-value channel))))
+      (and (eq *secret-unbound-value* (channel-value channel)))))
+
+(defun recv-blocks-p (channel)
+  ;; This is the actual -interface- version of recv-blocks-p that we can use if we want
+  ;; to check, from outside, if a channel would block. VERY CLEVER RITE?! :D -- sykopomp
+  (and (not (plusp (channel-writers channel)))
+       (%recv-blocks-p channel)))
 
 (defun wait-to-recv (channel)
   ;; Like wait-to-send, we have to poll a particular condition in combination with
   ;; using condition-wait.
-  (loop while (recv-blocks-p channel)
+  (loop while (%recv-blocks-p channel)
      do (bt:condition-wait (channel-recv-ok channel) (channel-lock channel))))
 
 (defun channel-grab-value (channel)
