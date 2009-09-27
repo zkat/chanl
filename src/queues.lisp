@@ -11,36 +11,54 @@
 (eval-when (:compile-toplevel)
   (defvar queue-sentinel (make-symbol "EMPTY")))
 
+(declaim (ftype (function (fixnum) simple-vector)))
 (define-speedy-function make-queue (length)
+  (declare (type fixnum length))
   "Creates a new queue of maximum size LENGTH"
-  (let ((queue (the simple-vector
-                 (make-array (the (integer 3 #.array-total-size-limit)
-                               (+ 2 length))
-                             :initial-element 2))))
-    (setf (svref queue 2) '#.queue-sentinel)
+  (let ((queue (make-array (the fixnum (+ 2 length)))))
+    (setf (svref queue 2) '#.queue-sentinel ; Sentinel value for an empty queue
+          (svref queue 1) 2        ; Tail pointer set to first element
+          (svref queue 0) 2)       ; Head pointer set to first element
     queue))
 
+(define-speedy-function queue-head (queue)
+  "QUEUE's head pointer"
+  (the fixnum (svref queue 0)))
+
+(define-speedy-function queue-tail (queue)
+  "QUEUE's tail pointer"
+  (the fixnum (svref queue 1)))
+
+;;; This function needs to be eliminated
 (define-speedy-function queue-peek (queue)
   "Dereference QUEUE's head pointer"
-  (svref queue (the (integer 2 #.(1- array-total-size-limit))
-                 (svref queue 0))))
+  (svref queue (queue-head queue)))
 
+;;; As does this one
 (define-speedy-function queue-zero-p (queue)
   "Checks whether QUEUE's theoretical length is zero"
-  (= (the (integer 2 #.(1- array-total-size-limit))
-       (svref queue 0))
-     (the (integer 2 #.(1- array-total-size-limit))
-       (svref queue 1))))
+  (= (the fixnum (queue-head queue))
+     (the fixnum (queue-tail queue))))
 
 (define-speedy-function queue-empty-p (queue)
-  "Checks whether QUEUE's effective length is zero"
-  (and (queue-zero-p queue)
-       (eq (queue-peek queue) '#.queue-sentinel)))
+  "Checks whether QUEUE is effectively empty"
+  ;; We keep the head reference around because we do two checks
+  (let ((head (queue-head queue)))
+    (declare (type fixnum head))
+    ;; Are the head and tail pointers the same?
+    (when (= head (the fixnum (queue-tail queue)))
+      ;; Is the value at the head pointer EQ to the sentinel?
+      (eq (svref queue head) '#.queue-sentinel))))
 
 (define-speedy-function queue-full-p (queue)
   "Checks whether QUEUE is effectively full"
-  (and (queue-zero-p queue)
-       (not (eq (queue-peek queue) '#.queue-sentinel))))
+  ;; We keep the head reference around because we do two checks
+  (let ((head (queue-head queue)))
+    (declare (type fixnum head))
+    ;; Are the head and tail pointers the same?
+    (when (= head (the fixnum (queue-tail queue)))
+      ;; Is there a real value at the head pointer?
+      (not (eq (svref queue head) '#.queue-sentinel)))))
 
 (define-speedy-function queue-count (queue)
   "Returns QUEUE's effective length"
