@@ -21,6 +21,17 @@
           (svref queue 0) 2)       ; Head pointer set to first element
     queue))
 
+(define-speedy-function queuep (x)
+  "If this returns NIL, X is not a queue"
+  (when (simple-vector-p x)
+    (let ((length (length x))
+          (head (svref x 0))
+          (tail (svref x 1)))
+      (and (integerp head)
+           (integerp tail)
+           (< 1 head length)
+           (< 1 tail length)))))
+
 (define-speedy-function queue-head (queue)
   "QUEUE's head pointer"
   (the fixnum (svref queue 0)))
