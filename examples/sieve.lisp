@@ -40,3 +40,13 @@
     (cleanup-leftovers
       (sieve prime-channel)
       (loop repeat n collect (recv prime-channel)))))
+
+(defun eratosthimnes (n)
+  (let ((bit-vector (make-array n :initial-element 1 :element-type 'bit)))
+    (loop for i from 2 upto (isqrt n) do
+         (loop for j from i
+            for index = (* i j)
+            until (>= index n) do
+            (setf (sbit bit-vector index) 0)))
+    (loop for i from 2 below (length bit-vector)
+       unless (zerop (sbit bit-vector i)) collect i)))
