@@ -42,10 +42,12 @@
       (loop repeat n collect (recv prime-channel)))))
 
 (defun eratosthenes (n)
+  (declare (optimize speed (safety 0) (debug 0))
+           (fixnum n))
   (let ((bit-vector (make-array n :initial-element 1 :element-type 'bit)))
     (loop for i from 2 upto (isqrt n) do
-         (loop for j from i
-            for index = (* i j)
+         (loop for j fixnum from i
+            for index fixnum = (* i j)
             until (>= index n) do
             (setf (sbit bit-vector index) 0)))
     (loop for i from 2 below (length bit-vector)
