@@ -36,16 +36,22 @@
     (is (channel-send-ok chan))
     (is (channel-recv-ok chan)))))
 
+(def-suite messaging :in chanl)
+(def-suite sending :in messaging)
+
+(test send)
+(test send-blocks-p)
+(test channel-insert-value)
+
+(def-suite receiving :in messaging)
+
+(test recv)
+(test recv-blocks-p)
+(test %recv-blocks-p)
+(test channel-grab-value)
+
 (def-suite channels-unbuffered :in channels)
 (in-suite channels-unbuffered)
-
-(test unbuffered-ignored
-  (let ((channel (make-channel)))
-    (is (channelp channel))
-    (signals error (channel-full-p channel))
-    (signals error (channel-empty-p channel))
-    (is (send-blocks-p channel))
-    (is (recv-blocks-p channel))))
 
 (test unbuffered-recv-context
   (let* ((channel (make-channel))
