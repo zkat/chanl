@@ -3,30 +3,7 @@
 ;;;; Copyright © 2009 Kat Marchan
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (in-package :chanl)
-
-(in-suite chanl)
-
-(test queue
-  (let ((queue (make-queue 2)))
-    (is (queue-empty-p queue))
-    (is (eq 5 (enqueue 5 queue)))
-    (is (not (queue-empty-p queue)))
-    (is (= 1 (queue-count queue)))
-    (is (eq 10 (enqueue 10 queue)))
-    (is (= 2 (queue-count queue)))
-    (is (= 5 (queue-peek queue)))
-    (is (= 5 (dequeue queue)))
-    (is (= 10 (dequeue queue)))))
-
-(test procs
-  (let ((proc (pexec (:name "proc") (sleep 2))))
-    (is (procp proc))
-    (is (proc-alive-p proc))
-    (is (string= "proc" (proc-name proc)))
-    (is (member proc (all-procs)))
-    (signals error (kill (current-proc)))))
 
 (def-suite channels :in chanl)
 (def-suite channels-unbuffered :in channels)
