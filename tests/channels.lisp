@@ -26,7 +26,7 @@
   (let ((chan (make-channel 10)))
     (is (channelp chan))
     (is (channel-buffered-p chan))
-    (is (channel-buffer chan)) ;we should check it's actually a queue
+    (is (queuep (channel-buffer chan)))
     (is (= 10 (queue-max-size (channel-buffer chan))))
     (is (= 0 (channer-readers chan)))
     (is (= 0 (channer-writers chan)))
@@ -35,7 +35,7 @@
     ;; they're what they're suposed to be.
     (is (channel-lock chan))
     (is (channel-send-ok chan))
-    (is (channel-recv-ok chan)))))
+    (is (channel-recv-ok chan))))
 
 (def-suite messaging :in chanl)
 (def-suite sending :in messaging)
