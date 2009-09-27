@@ -5,7 +5,6 @@
 ;;;; Preparation for the ChanL test suite
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (in-package :chanl)
 
 ;;; Setting up the :CHANL package to include Eos stuff
