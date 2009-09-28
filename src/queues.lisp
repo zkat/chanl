@@ -88,9 +88,9 @@
 
 (define-speedy-function next-index (current-index queue-real-length)
   (declare (fixnum current-index queue-real-length))
-  (let ((new-index (1+ current-index)))
+  (let ((new-index (1+ current-index)))                 ; Simply increment the index
     (declare (fixnum new-index))
-    (if (= new-index queue-real-length) 2 new-index)))
+    (if (= new-index queue-real-length) 2 new-index)))  ; Overflow to 2 if necessary
 
 (define-speedy-function enqueue (object queue)
   "Sets QUEUE's head to OBJECT and increments QUEUE's head pointer"
