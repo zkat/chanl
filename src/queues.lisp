@@ -94,18 +94,12 @@
 
 (define-speedy-function enqueue (object queue)
   "Sets QUEUE's head to OBJECT and increments QUEUE's head pointer"
-  (setf (svref queue (the (integer 2 #.(1- array-total-size-limit))
-                       (svref queue 1)))
-        object
-        (svref queue 1)
-        (the fixnum (+ 2 (mod (1- (the fixnum (svref queue 1)))
-                              (- (length queue) 2)))))
-  object)
+  (prog1 (setf (svref queue (queue-tail queue)) object)
+    (setf (svref queue 1) (next-index (queue-tail queue) (length queue)))))
 
-(define-speedy-function dequeue (queue)
+(define-speedy-function dequeue (queue &aux (head (queue-head queue)))
   "Sets QUEUE's tail to QUEUE, increments QUEUE's tail pointer, and returns the previous tail ref"
-  (prog1 (svref queue (svref queue 0))
-    (setf (svref queue 0)
-          (the fixnum (+ 2 (mod (1- (the fixnum (svref queue 0)))
-                                (- (length queue) 2)))))
-    (when (queue-zero-p queue) (setf (svref queue (svref queue 0)) '#.queue-sentinel))))
+  (prog1 (svref queue head)
+    (setf (svref queue 0) (next-index head (length queue)))
+    (when (= (the fixnum (queue-tail queue)) (the fixnum head))
+      (setf (svref queue head) '#.queue-sentinel))))
