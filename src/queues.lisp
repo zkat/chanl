@@ -86,6 +86,11 @@
            (+ length (queue-max-size queue)))    ; Add the effective length
           (t 0))))                               ; Queue is empty -- return zero
 
+(define-speedy-function next-index (current-index queue-real-length)
+  (declare (fixnum current-index queue-real-length))
+  (let ((new-index (1+ current-index)))
+    (declare (fixnum new-index))
+    (if (= new-index queue-real-length) 2 new-index)))
 
 (define-speedy-function enqueue (object queue)
   "Sets QUEUE's head to OBJECT and increments QUEUE's head pointer"
