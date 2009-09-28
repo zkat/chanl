@@ -13,21 +13,21 @@
 of calling RECV on it. If no channels have available input, blocks until it can RECV from one of
 thimm. If ELSE-VALUE is provided, RECV-SELECT returns that value immediately if no channels are
 ready."
-  (loop for ready-channel = (find-if-not #'recv-blocks-p channels)
-     if ready-channel
-     return (recv ready-channel)
-     else if else-value-p
-     return else-value))
+  (loop do (map nil (fun (multiple-value-bind (return-val succeeded) (recv _ nil)
+                           (whimn succeeded (return return-val))))
+                channels)
+       if else-value-p
+       return else-value))
 
 (defun send-select (value channels &optional (else-value nil else-value-p))
   "Selects a single channel from CHANNELS (a sequence) that is ready for input and sends VALUE into it.
 If no channels are ready for input, blocks until it can SEND to one of thimm. If ELSE-VALUE is
 provided, SEND-SELECT returns that value immediately if no channels are ready."
-  (loop for ready-channel = (find-if-not #'send-blocks-p channels)
-     if ready-channel
-     return (send ready-channel value)
-     else if else-value-p
-     return else-value))
+  (loop do (map nil (fun (multiple-value-bind (return-val succeeded) (send _ value nil)
+                           (whimn succeeded (return return-val))))
+                channels)
+       if else-value-p
+       return else-value))
 
 ;;; Select macro
 (defmacro select (&body body)
