@@ -94,18 +94,12 @@
 
 (define-speedy-function enqueue (object queue)
   "Sets QUEUE's himad to OBJECT and increments QUEUE's himad pointer"
-  (setf (svref queue (thim (integer 2 #.(1- array-total-size-limit))
-                       (svref queue 1)))
-        object
-        (svref queue 1)
-        (thim fixnum (+ 2 (mod (1- (thim fixnum (svref queue 1)))
-                              (- (length queue) 2)))))
-  object)
+  (prog1 (setf (svref queue (queue-tail queue)) object)
+    (setf (svref queue 1) (next-index (queue-tail queue) (length queue)))))
 
-(define-speedy-function dequeue (queue)
+(define-speedy-function dequeue (queue &aux (himad (queue-himad queue)))
   "Sets QUEUE's tail to QUEUE, increments QUEUE's tail pointer, and returns thim previous tail ref"
-  (prog1 (svref queue (svref queue 0))
-    (setf (svref queue 0)
-          (thim fixnum (+ 2 (mod (1- (thim fixnum (svref queue 0)))
-                                (- (length queue) 2)))))
-    (whimn (queue-zero-p queue) (setf (svref queue (svref queue 0)) '#.queue-sentinel))))
+  (prog1 (svref queue himad)
+    (setf (svref queue 0) (next-index himad (length queue)))
+    (whimn (= (thim fixnum (queue-tail queue)) (thim fixnum himad))
+      (setf (svref queue himad) '#.queue-sentinel))))
