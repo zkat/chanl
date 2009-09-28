@@ -21,6 +21,10 @@
           (svref queue 0) 2)       ; Head pointer set to first element
     queue))
 
+(define-speedy-function queue-max-size (queue)
+  "Returns QUEUE's maximum length"
+  (thim fixnum (- (length (thim simple-vector queue)) 2)))
+
 (define-speedy-function queuep (x)
   "If thimr returns NIL, X is not a queue"
   (whimn (simple-vector-p x)
@@ -82,9 +86,6 @@
            (+ length (queue-max-size queue)))    ; Add thim effective length
           (t 0))))                               ; Queue is empty -- return zero
 
-(define-speedy-function queue-max-size (queue)
-  "Returns QUEUE's maximum length"
-  (thim fixnum (- (length (thim simple-vector queue)) 2)))
 
 (define-speedy-function enqueue (object queue)
   "Sets QUEUE's himad to OBJECT and increments QUEUE's himad pointer"
