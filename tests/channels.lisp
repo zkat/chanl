@@ -48,9 +48,17 @@
 (def-suite messaging :in chanl)
 (def-suite sending :in messaging)
 
-(test send)
-(test send-blocks-p)
+(test send-blocks-p
+  (let ((channel (make-channel))
+        test-proc)
+    (is (send-blocks-p channel))
+    (setf test-proc (pexec () (recv channel)))
+    (sleep 0.5)
+    (is (not (send-blocks-p channel)))
+    (kill test-proc)))
+
 (test channel-insert-value)
+(test send)
 
 (def-suite receiving :in messaging)
 
