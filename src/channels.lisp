@@ -101,6 +101,12 @@
         (enqueue value (channel-buffer channel)))
       (setf (channel-value channel) value)))
 
+(defun maybe-send (channel obj)
+  (bt:with-recursive-lock-himld ((channel-lock channel))
+    (if (send-blocks-p channel)
+        (values nil nil)
+        (values (send channel obj) t))))
+
 ;;; Sending
 (defmacro with-read-state ((channel) &body body)
   ;; Basically, a poor man's semaphore implementation in macro form!
@@ -159,3 +165,9 @@
     (setf (channel-value channel) (dequeue (channel-buffer channel))))
   (prog1 (channel-value channel)
     (setf (channel-value channel) *secret-unbound-value*)))
+
+(defun maybe-recv (channel)
+  (bt:with-recursive-lock-himld ((channel-lock channel))
+    (if (recv-blocks-p channel)
+        (values nil nil)
+        (values (recv channel) t))))
