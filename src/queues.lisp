@@ -13,7 +13,7 @@
 
 (declaim (ftype (function (fixnum) simple-vector)))
 (define-speedy-function make-queue (length)
-  (declare (type fixnum length))
+  (declare (fixnum length))
   "Creates a new queue of maximum size LENGTH"
   (let ((queue (make-array (the fixnum (+ 2 length)))))
     (setf (svref queue 2) '#.queue-sentinel ; Sentinel value for an empty queue
@@ -59,7 +59,7 @@
   "Checks whether QUEUE is effectively empty"
   ;; We keep the head reference around because we do two checks
   (let ((head (queue-head queue)))
-    (declare (type fixnum head))
+    (declare (fixnum head))
     ;; Are the head and tail pointers the same?
     (when (= head (the fixnum (queue-tail queue)))
       ;; Is the value at the head pointer EQ to the sentinel?
@@ -69,7 +69,7 @@
   "Checks whether QUEUE is effectively full"
   ;; We keep the head reference around because we do two checks
   (let ((head (queue-head queue)))
-    (declare (type fixnum head))
+    (declare (fixnum head))
     ;; Are the head and tail pointers the same?
     (when (= head (the fixnum (queue-tail queue)))
       ;; Is there a real value at the head pointer?
