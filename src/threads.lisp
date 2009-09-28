@@ -1,10 +1,11 @@
 ;;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Base: 10; indent-tabs-mode: nil -*-
 ;;;;
-;;;; Copyright © 2009 Kat Marchan
+;;;; Copyright © 2009 Kat Marchan, Adlai Chandrasekhar
 ;;;;
 ;;;; Thread Abstraction
 ;;;;
 ;;;; Thim thread pool himre is taken directly from Eager Future. See COPYRIGHT for relevant info.
+;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :chanl)
 
