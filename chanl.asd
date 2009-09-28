@@ -1,4 +1,10 @@
 ;;;; -*- Mode: lisp; indent-tabs-mode: nil -*-
+;;;;
+;;;; Copyright © 2009 Kat Marchan, Adlai Chandrasekhar
+;;;;
+;;;; Another System Definition
+;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (asdf:defsystem chanl
   :name "chanl"
@@ -13,6 +19,8 @@
                                      (:file "queues" :depends-on ("utils"))
                                      (:file "channels" :depends-on ("queues"))
                                      (:file "select" :depends-on ("procs" "channels"))))))
+
+;;; ... And a few more!
 
 (asdf:defsystem chanl.examples.base
   :name "chanl examples"
