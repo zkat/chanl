@@ -1,10 +1,11 @@
 ;;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Base: 10; indent-tabs-mode: nil -*-
 ;;;;
-;;;; Copyright © 2009 Josh Marchan
+;;;; Copyright © 2009 Josh Marchan, Adlai Chandrasekhar
 ;;;;
 ;;;; Thread Abstraction
 ;;;;
 ;;;; The thread pool here is taken directly from Eager Future. See COPYRIGHT for relevant info.
+;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :chanl)
 

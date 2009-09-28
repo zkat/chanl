@@ -1,6 +1,11 @@
-;; a trivial example using channels with the lisp Tk implementation.
-;; requires ltk (see http://www.peter-herth.de/ltk/ltkdoc/)
-;; Example adapted from csp's tk example by roger peppe
+;;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Base: 10; indent-tabs-mode: nil -*-
+;;;;
+;;;; Copyright © 2009 Josh Marchan, Adlai Chandrasekhar
+;;;;
+;;;; A trivial example using channels with the lisp Tk implementation.
+;;;; Example adapted from csp's tk example by roger peppe
+;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :chanl.examples)
 
 (use-package '(:ltk))
