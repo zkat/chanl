@@ -6,6 +6,27 @@
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; The functions in this file are dangerous. Good compilers will generate code that will
+;;;   do VERY funky shit when called incorrectly. Calls to these functions should be hidden
+;;;   behind safe code that never passes arguments of incorrect types.
+
+;;; Unlike the standard queue implementation which you find in CL code (push to the tail of
+;;;   a list, pop from the head), these queues do not cons one bit. You do, however, need to
+;;;   "declare" a queue's size (at runtime) when you make one.
+
+;;; This is the API required by src/channels.lisp:
+;;;   These don't need to be super-optimized:
+;;;     (queue-count queue) -- How many elements are present in a queue
+;;;     (queue-max-size queue) -- The maximum size of a queue
+;;;   This one matters for performance, but not THAT much:
+;;;     (make-queue size) -- Create and return a queue of given maximum size.
+;;;   These do matter THAT much:
+;;;     (queue-full-p queue) -- Is this queue full?
+;;;     (queue-empty-p queue) -- Is this queue empty?
+;;;     (enqueue object queue) -- Enqueue an object in the queue, return object.
+;;;     (dequeue queue) -- Dequeue queue, return dequeued object.
+;;; All other functions in here should be marked as unsafe and apocalyptic.
+
 (in-package :chanl)
 
 (eval-when (:compile-toplevel)
@@ -20,6 +41,10 @@
           (svref queue 1) 2        ; Tail pointer set to first element
           (svref queue 0) 2)       ; Head pointer set to first element
     queue))
+
+;;; Do we need a compiler macro for the above when LENGTH is constant so that we
+;;;   don't add 2 at runtime? That's not very high on the priority list, although
+;;;   it'll probably take less time to write than this comment did. -- Adlai
 
 (define-speedy-function queue-max-size (queue)
   "Returns QUEUE's maximum length"
