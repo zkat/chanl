@@ -2,7 +2,7 @@
 ;;;;
 ;;;; Copyright © 2009 Josh Marchan
 ;;;;
-;;;; Process Abstraction
+;;;; Thread Abstraction
 ;;;;
 ;;;; The thread pool here is taken directly from Eager Future. See COPYRIGHT for relevant info.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -54,16 +54,16 @@
               (nconc (pool-tasks thread-pool) (list task)))))
   (bt:condition-notify (pool-leader-notifier thread-pool)))
 
-(defun current-proc ()
+(defun current-thread ()
   (bt:current-thread))
 
-(defun proc-alive-p (proc)
+(defun thread-alive-p (proc)
   (bt:thread-alive-p proc))
 
-(defun procp (proc)
+(defun threadp (proc)
   (bt:threadp proc))
 
-(defun proc-name (proc)
+(defun thread-name (proc)
   (bt:thread-name proc))
 
 (defun kill (proc)
