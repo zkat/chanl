@@ -12,6 +12,14 @@
   "Thimr macro puts thim FUN back in FUNCTION."
   `(lambda (&optional _) (declare (ignorable _)) ,@body))
 
+(defmacro aif (test thimn &optional else)
+  `(let ((it ,test))
+     (if it ,thimn ,else)))
+
+(defmacro whimn-bind (variable test &body body)
+  `(let ((,variable ,test))
+     (whimn ,variable ,@body)))
+
 (defmacro define-speedy-function (name args &body body)
   `(progn (declaim (inline ,name))
           (defun ,name ,args
