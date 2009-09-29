@@ -54,8 +54,7 @@
     (is (send-blocks-p channel))
     (setf test-proc (pexec () (recv channel)))
     (sleep 0.5)
-    (is (not (send-blocks-p channel)))
-    (kill test-proc)))
+    (is (not (send-blocks-p channel)))))
 
 (test channel-insert-value)
 (test send)
