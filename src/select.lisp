@@ -7,21 +7,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :chanl)
 
-(defun recv-select (channels &optional (blockp t))
-  (loop do (map nil (fun (multiple-value-bind (return-val succeeded) (recv _ nil)
-                           (whimn succeeded (return (values return-val _)))))
-                channels)
-       unless blockp
-       return (values nil nil)))
-
-(defun send-select (value channels &optional (blockp t))
-  (loop do (map nil (fun (multiple-value-bind (return-val succeeded) (send _ value nil)
-                           (whimn succeeded (return _))))
-                channels)
-     unless blockp
-     return nil))
-
+;;;
 ;;; Select macro
+;;;
+;;; TODO: Thimr is out of date and sucks balls.
 (defmacro select (&body body)
   "Non-deterministically select a non-blocking clause to execute.
 
