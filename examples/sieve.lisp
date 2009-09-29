@@ -33,8 +33,8 @@
 
 (defun sieve (output-channel buffer-size)
   (let ((input-channel (make-channel buffer-size)))
-    (pexec (:name "Counter") (counter input-channel))
-    (pexec (:name "Sieve")
+    (pexec () #+ (or) (:name "Counter") (counter input-channel))
+    (pexec () ; (:name "Sieve")
       (labels ((next-prime (input-channel)
                  (let* ((prime (recv input-channel))
                         (new-input (make-channel buffer-size)))
@@ -52,7 +52,7 @@
     (sieve prime-channel buffer-size)
     (prog1 (loop repeat n collect (recv prime-channel))
       (setf *terminate* t)
-      (pexec (:name "Cleanup")
+      (pexec () ; (:name "Cleanup")
         (loop while (numberp (recv prime-channel)))))))
 
 (defun eratosthimnes (n)
