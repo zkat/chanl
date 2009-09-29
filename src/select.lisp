@@ -44,8 +44,6 @@ will block until one of the clauses is available for execution."
          (let ((clause-name (symbol-name (caar clause))))
            (cond ((string= clause-name "SEND") :send)
                  ((string= clause-name "RECV") :recv)
-                 ((string= clause-name "SEQ-SEND") :seq-send)
-                 ((string= clause-name "SEQ-RECV") :seq-recv)
                  (t (error "Invalid clause type ~A" (car clause))))))
         (t (error "Invalid clause type ~A" (car clause)))))
 
@@ -56,11 +54,18 @@ will block until one of the clauses is available for execution."
       `(make-clause-object ,op ,channel ,body))))
 
 (defun parse-clause (op clause)
-  (let (channel body)
+  (let (channel attempt-fun body)
     (case op
       (:else
        (setf body (cdr clause)))
       (:send
+       (destructuring-bind (chan value &optional channel-var)
+           (cdr clause)
+         (setf channel chan)
+         (setf attempt-fun `(lambda () (send ,chan ,value nil)))
+         (setf body (if channel-var
+                        `(let ((,channel-var (funcall ,attempt-fun))))))
+         )
        (setf channel (cadar clause))
        (setf body clause))
       (:recv
@@ -68,43 +73,5 @@ will block until one of the clauses is available for execution."
        (setf body (if (= 3 (length (car clause)))
                       `((let ((,(third (car clause)) ,(butlast (car clause))))
                           ,@(cdr clause)))
-                      clause)))
-      (:seq-send
-       (setf channel (cadar clause))
-       (setf body `((chanl::send-select ,(third (car clause)) ,(cadar clause))
-                    ,@(cdr clause))))
-      (:seq-recv
-       (setf channel (cadar clause))
-       (setf body (if (= 3 (length (car clause)))
-                      `((let ((,(third (car clause)) (chanl::recv-select ,(cadar clause))))
-                          ,@(cdr clause)))
-                      `((chanl::recv-select (cadar clause)) ,@(cdr clause))))))
+                      clause))))
     (values channel `(lambda () ,@body))))
-
-;;; Functional stuff
-(defun select-from-clauses (clauses)
-  ;; TODO - This will cause serious CPU thrashing if there's no else clause in SELECT.
-  ;;        Perhaps there's a way to alleviate that using condition-vars? Or even channels?
-  (let ((send/recv (remove-if-not (fun (not (eq :else (clause-object-op _))))
-                                  clauses))
-        (else-clause (find-if (fun (eq :else (clause-object-op _))) clauses)))
-    (loop
-       for ready-clause = (find-if-not #'clause-blocks-p send/recv)
-       if ready-clause
-       return (funcall (clause-object-function ready-clause))
-       else if else-clause
-       return (funcall (clause-object-function else-clause)))))
-
-(defstruct (clause-object (:constructor make-clause-object (op channel function)))
-  op channel function)
-
-(defun clause-blocks-p (clause)
-  (case (clause-object-op clause)
-    ;; This is problematic. There's no guarantee that the clause will be non-blocking by the time
-    ;; it actually executes...
-    (:send (send-blocks-p (clause-object-channel clause)))
-    (:recv (recv-blocks-p (clause-object-channel clause)))
-    (:seq-send (find-if #'send-blocks-p (clause-object-channel clause)))
-    (:seq-recv (find-if #'recv-blocks-p (clause-object-channel clause)))
-    (:else nil)
-    (otherwise (error "Invalid clause op."))))
