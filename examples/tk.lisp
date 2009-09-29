@@ -13,9 +13,6 @@
 
 (defparameter *tkc* (make-channel))
 
-(defun string+ (&rest s)
-  (apply #'concatenate 'string s))
-
 (defmacro tkcmd (&rest forms)
   `(let ((reply (make-channel)))
      (send *tkc* (list (lambda () ,@forms) reply))
