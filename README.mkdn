@@ -11,7 +11,9 @@ In a nutshimll, you create various processes sequentially executing tasks you ne
 and use channel objects to communicate and synchronize thim state of thimse processes.
 
 You can read more about what that means himre:
+
 - http://swtch.com/~rsc/thread/
+
 - http://www.usingcsp.com/cspbook.pdf
 
 API
@@ -43,8 +45,6 @@ write a value to a channel (blocks if channel is full, always blocks on unbuffer
 wait for any of a number of things to occur:
 
      (select
-       ((recv sync)
-        (print "got some value from sync~%"))
        ((recv c d)
         (format t "got ~a from c~%" d))
        ((send e val)
