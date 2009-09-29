@@ -22,8 +22,10 @@
   (tkcmd (pack (make-instance 'button
                               :text msg
                               :master nil
-                              :command (lambda () (tkcmd (let ((c channel)
-                                                               (m msg)) (send c m))))))))
+                              :command
+                              ;; This lambda is just not getting called by LTK. I don't
+                              ;; see why... It doesn't -seem- to be a scoping issue?
+                              (lambda () (send channel msg))))))
 
 (defun ltk-button-demo ()
   (let* ((button-channel (make-channel)))
