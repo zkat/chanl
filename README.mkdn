@@ -58,12 +58,12 @@ wait for any of a number of things to occur:
 
 create a new process continually reading values and printing them:
 
-     (pexec (:name "Formatter process")
+     (pexec ()
        (loop (format t "~a~%" (recv *c*))))
 
 create a new process that runs a function:
 
-     (pcall #'my-function :name "My function is running!")
+     (pcall #'my-function)
 
 Also, you can refer to the examples/ directory for some runnable examples of
 how ChanL can be used. Currently there is a parallel prime sieve algorithm
