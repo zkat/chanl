@@ -12,6 +12,14 @@
   "This macro puts the FUN back in FUNCTION."
   `(lambda (&optional _) (declare (ignorable _)) ,@body))
 
+(defmacro aif (test then &optional else)
+  `(let ((it ,test))
+     (if it ,then ,else)))
+
+(defmacro when-bind (variable test &body body)
+  `(let ((,variable ,test))
+     (when ,variable ,@body)))
+
 (defmacro define-speedy-function (name args &body body)
   `(progn (declaim (inline ,name))
           (defun ,name ,args
