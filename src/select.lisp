@@ -34,4 +34,14 @@ SELECT's non-determinism is, in fact, very non-deterministic. Clauses are chosen
 in the order they are written. It's worth noting that SEND/RECV, when used on sequences of
 channels, are still linear in the way they go through the sequence -- the random selection is
 
+(defun clause-type (clause)
+  (cond ((when (symbolp (car clause))
+           (or (string-equal (car clause) "t")
+               (string-equal (car clause) "else")
+               (string-equal (car clause) "otherwise")))
+         :else)
+        ((atom (car clause)) (error "Invalid selector: ~S" (car clause)))
+        ((string-equal (caar clause) "send") :send)
+        ((string-equal (caar clause) "recv") :recv)
+        (t (error "Invalid selector: ~S" (caar clause)))))
 
