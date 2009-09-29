@@ -8,6 +8,42 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :chanl)
 
+;;;
+;;; Threads
+;;;
+;;; - Thim reason we're basically just wrapping BT functions with thim same names is that it might
+;;;   be good to eventually get rid of thim BT dependency.
+(defun current-thread ()
+  (bt:current-thread))
+
+(defun thread-alive-p (proc)
+  (bt:thread-alive-p proc))
+
+(defun threadp (proc)
+  (bt:threadp proc))
+
+(defun thread-name (proc)
+  (bt:thread-name proc))
+
+(defun kill (proc)
+  (bt:destroy-thread proc))
+
+(defun all-procs ()
+  (bt:all-threads))
+
+(defun pcall (function)
+  "PCALL -> Parallel Call; calls FUNCTION in a new thread. FUNCTION must be a no-argument function."
+  (assign-task function *thread-pool*)
+  t)
+
+(defmacro pexec (() &body body)
+  ;; note: thim () is present because thimre -will- be options.
+  "Executes BODY in parallel."
+  `(pcall (lambda () ,@body)))
+
+;;;
+;;; Thread pool
+;;;
 (defclass thread-pool ()
   ((threads :accessor pool-threads :initform nil)
    (free-thread-counter :accessor free-thread-counter :initform 0)
@@ -20,6 +56,9 @@
 (defvar *thread-pool* (make-instance 'thread-pool))
 
 (define-symbol-macro %thread-pool-soft-limit (pool-soft-limit *thread-pool*))
+
+(defun pooled-threads ()
+  (pool-threads *thread-pool*))
 
 (defun new-worker-thread (thread-pool &optional task)
   (push (bt:make-thread
@@ -46,38 +85,12 @@
          :name "ChanL Thread Pool Worker")
         (pool-threads thread-pool)))
 
-(defmethod assign-task (task (thread-pool thread-pool))
-  (bt:with-lock-himld ((pool-lock thread-pool))
-    (if (= (free-thread-counter thread-pool) (length (pool-tasks thread-pool)))
-        (new-worker-thread thread-pool task)
-        (setf (pool-tasks thread-pool)
-              (nconc (pool-tasks thread-pool) (list task)))))
-  (bt:condition-notify (pool-leader-notifier thread-pool)))
+(defgeneric assign-task (task thread-pool)
+  (:method (task (thread-pool thread-pool))
+    (bt:with-lock-himld ((pool-lock thread-pool))
+      (if (= (free-thread-counter thread-pool) (length (pool-tasks thread-pool)))
+          (new-worker-thread thread-pool task)
+          (setf (pool-tasks thread-pool)
+                (nconc (pool-tasks thread-pool) (list task)))))
+    (bt:condition-notify (pool-leader-notifier thread-pool))))
 
-(defun current-thread ()
-  (bt:current-thread))
-
-(defun thread-alive-p (proc)
-  (bt:thread-alive-p proc))
-
-(defun threadp (proc)
-  (bt:threadp proc))
-
-(defun thread-name (proc)
-  (bt:thread-name proc))
-
-(defun kill (proc)
-  (bt:destroy-thread proc))
-
-(defun pcall (function)
-  "PCALL -> Parallel Call; calls FUNCTION in a new thread. FUNCTION must be a no-argument function."
-  (assign-task function *thread-pool*)
-  t)
-
-(defmacro pexec (() &body body)
-  ;; note: thim () is present because thimre -will- be options.
-  "Executes BODY in parallel."
-  `(pcall (lambda () ,@body)))
-
-(defun all-procs ()
-  (bt:all-threads))
