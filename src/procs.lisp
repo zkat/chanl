@@ -26,7 +26,7 @@
          (lambda ()
            (unwind-protect
                 (loop (when task (funcall task))
-                   (bt:with-lock-held ((lock thread-pool))
+                   (bt:with-lock-held ((pool-lock thread-pool))
                      (if (and (pool-soft-limit thread-pool)
                               (> (length (pool-threads thread-pool))
                                  (pool-soft-limit thread-pool)))
@@ -42,7 +42,7 @@
                        (decf (free-thread-counter thread-pool)))))
              (bt:with-lock-held ((pool-lock thread-pool))
                (setf (pool-threads thread-pool)
-                     (delete (current-thread) (pool-threads thread-pool))))))
+                     (delete (bt:current-thread) (pool-threads thread-pool))))))
          :name "ChanL Thread Pool Worker")
         (pool-threads thread-pool)))
 
@@ -71,7 +71,7 @@
 
 (defun pcall (function)
   "PCALL -> Parallel Call; calls FUNCTION in a new thread. FUNCTION must be a no-argument function."
-  (assign-task function)
+  (assign-task function *thread-pool*)
   t)
 
 (defmacro pexec (() &body body)
