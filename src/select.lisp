@@ -39,6 +39,24 @@ SELECT will block until one of the clauses is available for execution.
 SELECT's non-determinism is, in fact, very non-deterministic. Clauses are chosen at random, not
 in the order they are written. It's worth noting that SEND/RECV, when used on sequences of
 channels, are still linear in the way they go through the sequence -- the random selection is
+reserved for individual SELECT clauses."
+  (let ((*select-block-name* (gensym))
+        (clause-vector-name (gensym)))
+    `(block ,*select-block-name*
+       (let ((,clause-vector-name (funcall 'vector
+                                           ,@(mapcar 'wrap-select-clause
+                                                   (remove :else clauses :key 'clause-type)))))
+         ,(aif (find :else clauses :key 'clause-type)
+               `(loop repeat (length ,clause-vector-name)
+                   for index = (random (length ,clause-vector-name)) then
+                   (if (= (length ,clause-vector-name) (incf index)) 0 index)
+                   do (funcall (svref ,clause-vector-name index))
+                   finally ,@(wrap-select-clause it))
+               `(loop for starting-index = (random (length ,clause-vector-name)) do
+                   (loop repeat (length ,clause-vector-name)
+                      for index = starting-index then
+                      (if (= (length ,clause-vector-name) (incf index)) 0 index)
+                      do (funcall (svref ,clause-vector-name index)))))))))
 
 (defun clause-type (clause)
   (cond ((when (symbolp (car clause))
