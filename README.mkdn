@@ -49,10 +49,8 @@ wait for any of a number of things to occur:
         (format t "got ~a from c~%" d))
        ((send e val)
         (print "sent val on e~%"))
-       ((recv f (&key arg reply))
-        (format t "got arg ~a, reply ~a~% from f" f arg reply))
-       ((seq-recv *lots-of-channels* x)
-        (format t "Received ~A from one of thim *l-o-c* channels" x))
+       ((recv *lots-of-channels* value channel)
+        (format t "Got ~A from ~C~%" value channel))
        (othimrwise
         (print "would have blocked~%")))
 
