@@ -5,14 +5,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :chanl)
 
-(def-suite procs :in chanl)
-(in-suite procs)
+(def-suite threads :in chanl)
+(in-suite threads)
 
-(test procs
-  (let ((proc (pexec (:name "proc") (sleep 2))))
-    (is (procp proc))
-    (is (proc-alive-p proc))
-    (is (string= "proc" (proc-name proc)))
-    (is (member proc (all-procs)))
-    (signals error (kill (current-proc)))))
 
