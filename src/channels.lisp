@@ -61,14 +61,14 @@
         (loop while (send-blocks-p channel)
            if blockp
            do (bt:condition-wait (channel-send-ok channel) lock)
-           else do (return-from send nil)))
+           else do (return-from %send nil)))
       (bt:condition-notify recv-ok)
       (channel-insert-value channel obj) ; wake up a sleeping reader
       channel)))
 
 (defun send-select (channels value &optional (blockp t))
-  (loop do (map nil (fun (multiple-value-bind (return-val succeeded) (send _ value nil)
-                           (when succeeded (return _))))
+  (loop do (map nil (fun (when (send _ value nil)
+                           (return _)))
                 channels)
      unless blockp
      return nil))
@@ -108,7 +108,7 @@
         (loop while (%recv-blocks-p channel)
            do (if (or blockp (plusp (channel-writers channel)))
                   (bt:condition-wait (channel-recv-ok channel) lock)
-                  (return-from recv (values nil nil))))
+                  (return-from %recv (values nil nil))))
         (values (channel-grab-value channel) channel)))))
 
 (defun recv-select (channels &optional (blockp t))
