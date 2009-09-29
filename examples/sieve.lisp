@@ -40,7 +40,7 @@
                         (new-input (make-channel buffer-size)))
                    (send output-channel prime)
                    (when (numberp prime)
-                     (pexec (:name (format nil "Filter ~D" prime))
+                     (pexec () ; (:name (format nil "Filter ~D" prime))
                        (filter prime input-channel new-input))
                      (next-prime new-input)))))
         (next-prime input-channel)))
