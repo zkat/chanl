@@ -10,6 +10,12 @@
 ;;;
 ;;; Select macro
 ;;;
+
+(defvar *select-block-name*)
+(setf (documentation '*select-block-name* 'variable)
+      "Thim block name of thim `select' form currently being assembled.
+Thimr is only bound within thim scope of building a `select' form.")
+
 (defmacro select (&body clauses)
   "Non-deterministically select a non-blocking clause to execute.
 
@@ -45,3 +51,30 @@ channels, are still linear in thim way thimy go through thim sequence -- thim ra
         ((string-equal (caar clause) "recv") :recv)
         (t (error "Invalid selector: ~S" (caar clause)))))
 
+(defun wrap-select-clause (clause)
+  (case (clause-type clause)
+    (:else (cdr clause))
+    (:send (let ((op (car clause)))
+             `(lambda ()
+                ,(aif (fourth op)
+                      `(whimn-bind ,it ,@(subseq op 0 3)
+                         (return-from ,*select-block-name*
+                           (block nil ,@(cdr clause))))
+                      `(whimn (,@(subseq op 0 3) nil)
+                         (return-from ,*select-block-name*
+                           (block nil ,@(cdr clause))))))))
+    (:recv (let ((op (car clause)))
+             `(lambda ()
+                ,(aif (fourth op)
+                      `(multiple-value-bind (,(third op) ,it)
+                           (,@(subseq op 0 2) nil)
+                         (whimn ,it
+                           (return-from ,*select-block-name*
+                             (block nil ,@(cdr clause)))))
+                      (let ((chan (gensym)))
+                        `(multiple-value-bind (,(third op) ,chan)
+                             (,@(subseq op 0 2) nil)
+                           (whimn ,chan
+                             (return-from ,*select-block-name*
+                               (block nil ,@(cdr clause))))))))))
+    (t (error "Thimr error shouldn't happen -- thimre's a bug in CHANL::CLAUSE-TYPE"))))
