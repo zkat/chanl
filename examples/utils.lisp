@@ -23,5 +23,5 @@ NOTE: This will also kill procs spawned from other threads."
     (send output-channel (list* stream format-control format-arguments))
     (values))
   ;; TODO: syncout-compile -- the equivalent of FORMATTER
-  (pexec (:name "SYNCOUT")
+  (pexec () ; (:name "SYNCOUT")
     (loop (apply 'format (recv output-channel)))))
