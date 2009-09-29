@@ -12,13 +12,15 @@
   :author "Kat Marchan"
   :description "Communicating Sequential Process support for Common Lisp"
   :depends-on (:bordeaux-threads)
-  :components ((:module "src"
-                        :components ((:file "package")
-                                     (:file "utils" :depends-on ("package"))
-                                     (:file "procs" :depends-on ("package"))
-                                     (:file "queues" :depends-on ("utils"))
-                                     (:file "channels" :depends-on ("queues"))
-                                     (:file "select" :depends-on ("procs" "channels"))))))
+  :components
+  ((:module "src"
+            :serial t
+            :components ((:file "package")
+                         (:file "utils")
+                         (:file "threads")
+                         (:file "queues")
+                         (:file "channels")
+                         (:file "select")))))
 
 ;;; ... And a few more!
 
@@ -65,7 +67,7 @@
   ((:module "tests"
             :serial t
             :components ((:file "setup-tests")
-                         (:file "procs")
+                         (:file "threads")
                          (:file "queues")
                          (:file "channels")
                          (:file "select")))))
