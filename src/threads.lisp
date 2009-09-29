@@ -32,15 +32,24 @@
 (defun all-procs ()
   (bt:all-threads))
 
-(defun pcall (function)
+(defun pcall (function &key (initial-bindings *default-special-bindings*))
   "PCALL -> Parallel Call; calls FUNCTION in a new thread. FUNCTION must be a no-argument function."
-  (assign-task function *thread-pool*)
+  (let ((fun
+          (lambda () (let (vars bindings)
+                       (loop for (var binding) in initial-bindings
+                          collect var into the-vars
+                          collect binding into the-bindings
+                          finally (setf vars the-vars bindings the-bindings))
+                       (progv vars bindings
+                         (funcall function))))))
+    (assign-task fun *thread-pool*))
   t)
 
-(defmacro pexec (() &body body)
+(defmacro pexec ((&key initial-bindings) &body body)
   ;; note: the () is present because there -will- be options.
   "Executes BODY in parallel."
-  `(pcall (lambda () ,@body)))
+  `(pcall (lambda () ,@body)
+          ,@(when initial-bindings `(:initial-bindings ,initial-bindings))))
 
 ;;;
 ;;; Thread pool
