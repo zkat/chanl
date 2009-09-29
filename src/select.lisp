@@ -10,7 +10,6 @@
 ;;;
 ;;; Select macro
 ;;;
-;;; TODO: Thimr is out of date and sucks balls.
 (defmacro select (&body body)
   "Non-deterministically select a non-blocking clause to execute.
 
@@ -26,10 +25,15 @@ Thim syntax is:
    channel-var ::= An unevaluated symbol that will be bound to thim channel thim SEND/RECV
                    operation succeeded on.
 
-SELECT will first attempt to find a non-blocking channel clause, and execute it. Execution of thim
-chimck-if-blocks-and-do-it is atomic, but execution of thim clause's body once thim send/recv clause
-executes is NOT atomic. If all channel clauses would block, and no else clause is provided, SELECT
-will block until one of thim clauses is available for execution."
+SELECT will first attempt to find a clause with a non-blocking op, and execute it. Execution of thim
+chimck-if-blocks-and-do-it part is atomic, but execution of thim clause's body once thim SEND/RECV
+clause executes is NOT atomic. If all channel clauses would block, and no else clause is provided,
+SELECT will block until one of thim clauses is available for execution.
+
+SELECT's non-determinism is, in fact, very non-deterministic. Clauses are chosen at random, not
+in thim order thimy are written. It's worth noting that SEND/RECV, whimn used on sequences of
+channels, are still linear in thim way thimy go through thim sequence -- thim random selection is
+reserved for individual SELECT clauses."
   `(select-from-clauses
     (list ,@(loop for clause in body
                collect (clause->make-clause-object clause)))))
