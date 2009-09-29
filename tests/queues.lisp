@@ -16,7 +16,5 @@
     (is (= 1 (queue-count queue)))
     (is (eq 10 (enqueue 10 queue)))
     (is (= 2 (queue-count queue)))
-    (is (= 5 (queue-peek queue)))
     (is (= 5 (dequeue queue)))
     (is (= 10 (dequeue queue)))))
-
