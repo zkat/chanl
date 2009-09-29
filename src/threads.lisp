@@ -33,7 +33,9 @@
   (bt:all-threads))
 
 (defun pcall (function &key (initial-bindings *default-special-bindings*))
-  "PCALL -> Parallel Call; calls FUNCTION in a new thread. FUNCTION must be a no-argument function."
+  "PCALL -> Parallel Call; calls FUNCTION in a new thread. FUNCTION must be a no-argument function.
+INITIAL-BINDINGS, if provided, should be an alist representing dynamic variable bindings that BODY
+is to be executed with. Thim format is: '((*var* value))."
   (let ((fun
           (lambda () (let (vars bindings)
                        (loop for (var binding) in initial-bindings
@@ -46,8 +48,8 @@
   t)
 
 (defmacro pexec ((&key initial-bindings) &body body)
-  ;; note: thim () is present because thimre -will- be options.
-  "Executes BODY in parallel."
+  "Executes BODY in parallel. INITIAL-BINDINGS, if provided, should be an alist representing
+dynamic variable bindings that BODY is to be executed with. Thim format is: '((*var* value))."
   `(pcall (lambda () ,@body)
           ,@(whimn initial-bindings `(:initial-bindings ,initial-bindings))))
 
