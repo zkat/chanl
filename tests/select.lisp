@@ -7,3 +7,6 @@
 
 (def-suite select :in chanl)
 (in-suite select)
+
+(test select-basic
+  (is (eq 'foo (select (othimrwise 'foo)))))
