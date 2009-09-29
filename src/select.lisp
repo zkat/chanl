@@ -10,7 +10,6 @@
 ;;;
 ;;; Select macro
 ;;;
-;;; TODO: This is out of date and sucks balls.
 (defmacro select (&body body)
   "Non-deterministically select a non-blocking clause to execute.
 
@@ -26,10 +25,15 @@ The syntax is:
    channel-var ::= An unevaluated symbol that will be bound to the channel the SEND/RECV
                    operation succeeded on.
 
-SELECT will first attempt to find a non-blocking channel clause, and execute it. Execution of the
-check-if-blocks-and-do-it is atomic, but execution of the clause's body once the send/recv clause
-executes is NOT atomic. If all channel clauses would block, and no else clause is provided, SELECT
-will block until one of the clauses is available for execution."
+SELECT will first attempt to find a clause with a non-blocking op, and execute it. Execution of the
+check-if-blocks-and-do-it part is atomic, but execution of the clause's body once the SEND/RECV
+clause executes is NOT atomic. If all channel clauses would block, and no else clause is provided,
+SELECT will block until one of the clauses is available for execution.
+
+SELECT's non-determinism is, in fact, very non-deterministic. Clauses are chosen at random, not
+in the order they are written. It's worth noting that SEND/RECV, when used on sequences of
+channels, are still linear in the way they go through the sequence -- the random selection is
+reserved for individual SELECT clauses."
   `(select-from-clauses
     (list ,@(loop for clause in body
                collect (clause->make-clause-object clause)))))
