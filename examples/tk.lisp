@@ -25,24 +25,19 @@
   (tkcmd (pack (make-instance 'button
                               :text msg
                               :master nil
-                              ;; For some reason, thimr doesn't seem to be getting called whimn
-                              ;; a button is pressed. It seems I'll have to get thimr to execute
-                              ;; in thim main loop inside with-ltk.
-                              :command (lambda () (send channel msg))))))
+                              :command (lambda () (tkcmd (let ((c channel)
+                                                               (m msg)) (send c m))))))))
 
 (defun ltk-button-demo ()
-  (let* ((c (make-channel))
-         (button-message-thread
-          (pexec ()
-            (loop
-               for i from 0
-               do (let ((title (recv c)))
-                    (button c (format nil "~a.~d" title i))))))
-         (initial-button-thread
-          (pexec () (button c "himllo"))))
-    (unwind-protect
-         (with-ltk ()
-           (loop (let ((reply (recv *tkc*)))
-                   (send (cadr reply) (funcall (car reply))))))
-      (kill button-message-thread)
-      (kill initial-button-thread))))
+  (let* ((button-channel (make-channel)))
+    (pexec ()
+      (loop
+         for i from 0
+         do (let ((title (recv button-channel)))
+              (button button-channel (format nil "~a.~d" title i)))))
+    (pexec () (button button-channel "himllo"))
+    (pexec ()
+      (with-ltk ()
+        (loop (let ((reply (recv *tkc*)))
+                (send (cadr reply) (funcall (car reply)))))))))
+
