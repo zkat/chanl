@@ -153,7 +153,7 @@ received from. When BLOCKP is NIL, RECV will immediately return (values NIL NIL)
 blocking (if it would block)"
   (if (typep chan-or-chans 'sequence)
       (recv-select chan-or-chans blockp)
-      (%recv chan-or-chans)))
+      (%recv chan-or-chans blockp)))
 
 (defun recv-blocks-p (channel)
   "Returns T if trying to RECV from CHANNEL would block. Note that this is not an atomic operation,
@@ -171,7 +171,7 @@ immediately return NIL instead of blocking, if there's no channel available to s
 SEND succeeds, it returns the channel the value was sent into."
   (if (typep chan-or-chans 'sequence)
       (send-select chan-or-chans value blockp)
-      (%send chan-or-chans value)))
+      (%send chan-or-chans value blockp)))
 
 (defun send-blocks-p (channel)
   "Returns T if trying to SEND to CHANNEL would block. Note that this is not an atomic operation,
