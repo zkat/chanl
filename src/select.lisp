@@ -51,7 +51,7 @@ reserved for individual SELECT clauses."
                    for index = (random (length ,clause-vector-name)) then
                    (if (= (length ,clause-vector-name) (incf index)) 0 index)
                    do (funcall (svref ,clause-vector-name index))
-                   finally ,@(wrap-select-clause it))
+                   finally ,(wrap-select-clause it))
                `(loop for starting-index = (random (length ,clause-vector-name)) do
                    (loop repeat (length ,clause-vector-name)
                       for index = starting-index then
@@ -71,7 +71,8 @@ reserved for individual SELECT clauses."
 
 (defun wrap-select-clause (clause)
   (case (clause-type clause)
-    (:else (cdr clause))
+    (:else `(return-from ,*select-block-name*
+              (block nil ,@(cdr clause))))
     (:send (let ((op (car clause)))
              `(lambda ()
                 ,(aif (fourth op)
