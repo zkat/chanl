@@ -29,7 +29,7 @@
 (defun kill (proc)
   (bt:destroy-thread proc))
 
-(defun all-procs ()
+(defun all-threads ()
   (bt:all-threads))
 
 (defun pcall (function &key (initial-bindings *default-special-bindings*))
