@@ -55,8 +55,15 @@
   ((:module "examples"
             :components ((:file "tk")))))
 
+(asdf:defsystem chanl.examples.futures
+  :depends-on (:chanl.examples.base)
+  :components
+  ((:module "examples"
+            :components ((:file "futures")))))
+
 (asdf:defsystem chanl.examples
-  :depends-on (:chanl.examples.ltk :chanl.examples.sieve :chanl.examples.conditions))
+  :depends-on (:chanl.examples.ltk :chanl.examples.sieve :chanl.examples.conditions 
+               :chanl.examples.futures))
 
 (asdf:defsystem chanl.tests
   :name "chanl tests"
