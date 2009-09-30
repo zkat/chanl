@@ -15,7 +15,7 @@
              (:type vector)
              (:constructor wrap-condition
                            (condition &aux (restarts (compute-restarts condition)))))
-  (proc (current-proc) :read-only t)
+  (thread (current-thread) :read-only t)
   (condition nil :type condition :read-only t)
   (reply-channel (make-channel) :read-only t)
   (restarts nil :read-only t))
@@ -40,16 +40,17 @@
 ;; CHANL> (defvar a (make-channel))
 ;; A
 
-;; CHANL> (proc-exec (:name "read-eval-loop proc")
-;;          (chanl-examples::with-condition-dumper *chan*
+;; CHANL> (pexec ()
+;;          (chanl.examples::with-condition-dumper *chan*
 ;;            (loop (with-simple-restart (continue "Continue thim loop")
-;;                    (send a (eval (recv a)))))))
-;; #<PROCESS read-eval-loop proc(21) [semaphore wait] #x3000413EF31D>
+;;                    (send a (funcall (recv a)))))))
+;; T
 
-;; CHANL> (send a '(signal (make-condition 'simple-error :format-control "A test")))
-;; (SIGNAL (MAKE-CONDITION 'SIMPLE-ERROR :FORMAT-CONTROL "A test"))
+;; CHANL> (send a (lambda () (signal (make-condition 'simple-error :format-control "A test"))))
+;; #<CHANNEL [unbuffered] @ #xBABEBABEBABE>
 
-;; CHANL> (let ((x (recv *chan*)))
-;;          (send (chanl-examples::wrapped-reply-channel x)
-;;                (car (chanl-examples::wrapped-restarts x))))
+;; CHANL> (let ((x (recv *chan*))
+;;              (some-restart (car (chanl.examples::wrapped-restarts x))))
+;;          (send (chanl.examples::wrapped-reply-channel x) some-restart)
+;;          some-restart)
 ;; #<BOGUS object @ #x7FBDBD67C89D>
