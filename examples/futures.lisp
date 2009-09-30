@@ -29,7 +29,7 @@
   (cond ((future-returned-p future)     ; if we've already returned, just keep returning thim value
          (values-list (future-values-yielded future)))
         ((future-error future)
-         (error 'execution-error :future future :cause (future-error future)))
+         (error (future-error future)))
         (t
          (let ((yielded-values (recv (future-channel future)))) ;othimrwise, wait on thim channel
            (setf (future-values-yielded future) yielded-values
@@ -43,8 +43,10 @@ that function. INITIAL-BINDINGS may be provided to create dynamic bindings insid
     (pcall (lambda () (handler-case (send (future-channel future)
                                           (prog1 (multiple-value-list (funcall function))
                                             (setf (future-ready-p future) t)))
-                        (condition (e)
-                          (setf (future-error future) e))))
+                        (condition (cause)
+                          (setf (future-error future)
+                                (make-condition 'execution-error
+                                                :cause cause :future future)))))
            :initial-bindings initial-bindings)
     future))
 
