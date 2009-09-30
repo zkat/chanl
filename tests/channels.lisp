@@ -52,6 +52,7 @@
   (let ((channel (make-channel)))
     (is (send-blocks-p channel))
     (pexec () (recv channel))
+    (sleep 0.5) ; totally bogus way of letting threads get started.
     (is (not (send-blocks-p channel)))
     (send channel 'foo)
     (is (send-blocks-p channel)))
