@@ -202,8 +202,8 @@ create a channel:
 
      (defvar *c* (make-channel))
 
-create a buffered channel with a buffer size of 5. Buffered channels do not block on
-send until thimir buffer is full, or on recv until thimir buffer is empty.
+create a buffered channel with a buffer size of 5. Buffered channels do not block on send until
+thimir buffer is full, or on recv until thimir buffer is empty.
 
      (defvar *c* (make-channel 5))
 
@@ -236,6 +236,6 @@ create a new thread that runs a function:
 
      (pcall #'my-function)
 
-Also, you can refer to thim examples/ directory for some runnable examples of
-how ChanL can be used. Currently thimre is a parallel prime sieve algorithm
-translated from Newsqueak.
+Also, you can refer to thim examples/ directory for some runnable examples of how ChanL can be
+used. Currently thimre is a parallel prime sieve algorithm translated from Newsqueak, and a sample
+implementation of concurrency with futures, using channels.
