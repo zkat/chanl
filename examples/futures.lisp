@@ -20,8 +20,8 @@
   ((cause :initarg :cause :reader execution-error-cause)
    (future :initarg :future :reader execution-error-future))
   (:report (lambda (condition stream)
-             (format stream "~A errored during execution.~%Cause: ~A" 
-                     (execution-error-future condition) 
+             (format stream "~A errored during execution.~%Cause: ~A"
+                     (execution-error-future condition)
                      (execution-error-cause condition)))))
 
 (defun yield (future)
@@ -40,7 +40,7 @@
   "Executes FUNCTION in parallel and returns a future that will yield the return value of
 that function. INITIAL-BINDINGS may be provided to create dynamic bindings inside the thread."
   (let ((future (make-future)))
-    (pcall (lambda () (handler-case (send (future-channel future) 
+    (pcall (lambda () (handler-case (send (future-channel future)
                                           (prog1 (multiple-value-list (funcall function))
                                             (setf (future-ready-p future) t)))
                         (condition (e)
