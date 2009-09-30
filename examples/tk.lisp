@@ -8,7 +8,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :chanl.examples)
 
-(use-package '(:ltk))
 (export '(ltk-button-demo))
 
 (defparameter *tkc* (make-channel))
@@ -19,13 +18,13 @@
      (recv reply)))
 
 (defun button (channel msg)
-  (tkcmd (pack (make-instance 'button
-                              :text msg
-                              :master nil
-                              :command
-                              ;; This lambda is just not getting called by LTK. I don't
-                              ;; see why... It doesn't -seem- to be a scoping issue?
-                              (lambda () (send channel msg))))))
+  (tkcmd (ltk:pack (make-instance 'ltk:button
+                                  :text msg
+                                  :master nil
+                                  :command
+                                  ;; This lambda is just not getting called by LTK. I don't
+                                  ;; see why... It doesn't -seem- to be a scoping issue?
+                                  (lambda () (send channel msg))))))
 
 (defun ltk-button-demo ()
   (let* ((button-channel (make-channel)))
@@ -36,7 +35,7 @@
               (button button-channel (format nil "~a.~d" title i)))))
     (pexec () (button button-channel "hello"))
     (pexec ()
-      (with-ltk ()
+      (ltk:with-ltk ()
         (loop (let ((reply (recv *tkc*)))
                 (send (cadr reply) (funcall (car reply)))))))))
 
