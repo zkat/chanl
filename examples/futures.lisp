@@ -1,11 +1,17 @@
+;;;; -*- Mode: lisp; indent-tabs-mode: nil -*-
+;;;;
 ;;;; ChanL example implementation of doing concurrency using futures instead of channels.
 ;;;;
-;;;; API is essentially Eager Future's. This example is pretty nice at showing how well
-;;;; channels work as concurrency primitives for implementing higher-level constructs.
+;;;; Copyright © 2009 Josh Marchan, Adlai Chandrasekhar
 ;;;;
-;;;; See COPYRIGHT for licensing information wrt Eager Future, which this might apply to.
+;;;; This file is derived from 'Eager Future'; see the file COPYRIGHT, in the top directory,
+;;;; for the license information for that project.
+;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :chanl.examples)
+
+;;; This example is similar to Eager Future's API.
+;;; It demonstrates the value of channels as concurrency primitives.
 
 (defstruct (future (:print-object (lambda (f s) (print-unreadable-object (f s :type t :identity t)))))
   (channel (make-channel)) values-yielded returned-p ready-p error)
