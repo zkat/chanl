@@ -24,8 +24,8 @@
                                      (queue-max-size (channel-buffer channel)))
                              (format stream "[unbuffered]"))))))
   (value *secret-unbound-value*) buffer
-  (readers 0) ; number of readers currently trying to read
-  (writers 0)
+  (readers 0 :type fixnum) ; number of readers currently trying to read
+  (writers 0 :type fixnum)
   (lock (bt:make-recursive-lock) :read-only t)
   (send-ok (bt:make-condition-variable) :read-only t)
   (recv-ok (bt:make-condition-variable) :read-only t))
