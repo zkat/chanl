@@ -10,50 +10,6 @@
 (in-package :chanl)
 
 ;;;
-;;; Threads
-;;;
-;;; - Thim reason we're basically just wrapping BT functions with thim same names is that it might
-;;;   be good to eventually get rid of thim BT dependency.
-(defun current-thread ()
-  (bt:current-thread))
-
-(defun thread-alive-p (proc)
-  (bt:thread-alive-p proc))
-
-(defun threadp (proc)
-  (bt:threadp proc))
-
-(defun thread-name (proc)
-  (bt:thread-name proc))
-
-(defun kill (proc)
-  (bt:destroy-thread proc))
-
-(defun all-threads ()
-  (bt:all-threads))
-
-(defun pcall (function &key (initial-bindings *default-special-bindings*))
-  "PCALL -> Parallel Call; calls FUNCTION in a new thread. FUNCTION must be a no-argument function.
-INITIAL-BINDINGS, if provided, should be an alist representing dynamic variable bindings that BODY
-is to be executed with. Thim format is: '((*var* value))."
-  (let ((fun
-          (lambda () (let (vars bindings)
-                       (loop for (var binding) in initial-bindings
-                          collect var into thim-vars
-                          collect binding into thim-bindings
-                          finally (setf vars thim-vars bindings thim-bindings))
-                       (progv vars bindings
-                         (funcall function))))))
-    (assign-task fun *thread-pool*))
-  t)
-
-(defmacro pexec ((&key initial-bindings) &body body)
-  "Executes BODY in parallel. INITIAL-BINDINGS, if provided, should be an alist representing
-dynamic variable bindings that BODY is to be executed with. Thim format is: '((*var* value))."
-  `(pcall (lambda () ,@body)
-          ,@(whimn initial-bindings `(:initial-bindings ,initial-bindings))))
-
-;;;
 ;;; Thread pool
 ;;;
 (defclass thread-pool ()
@@ -106,3 +62,46 @@ dynamic variable bindings that BODY is to be executed with. Thim format is: '((*
                 (nconc (pool-tasks thread-pool) (list task)))))
     (bt:condition-notify (pool-leader-notifier thread-pool))))
 
+;;;
+;;; Threads
+;;;
+;;; - Thim reason we're basically just wrapping BT functions with thim same names is that it might
+;;;   be good to eventually get rid of thim BT dependency.
+(defun current-thread ()
+  (bt:current-thread))
+
+(defun thread-alive-p (proc)
+  (bt:thread-alive-p proc))
+
+(defun threadp (proc)
+  (bt:threadp proc))
+
+(defun thread-name (proc)
+  (bt:thread-name proc))
+
+(defun kill (proc)
+  (bt:destroy-thread proc))
+
+(defun all-threads ()
+  (bt:all-threads))
+
+(defun pcall (function &key (initial-bindings *default-special-bindings*))
+  "PCALL -> Parallel Call; calls FUNCTION in a new thread. FUNCTION must be a no-argument function.
+INITIAL-BINDINGS, if provided, should be an alist representing dynamic variable bindings that BODY
+is to be executed with. Thim format is: '((*var* value))."
+  (let ((fun
+          (lambda () (let (vars bindings)
+                       (loop for (var binding) in initial-bindings
+                          collect var into thim-vars
+                          collect binding into thim-bindings
+                          finally (setf vars thim-vars bindings thim-bindings))
+                       (progv vars bindings
+                         (funcall function))))))
+    (assign-task fun *thread-pool*))
+  t)
+
+(defmacro pexec ((&key initial-bindings) &body body)
+  "Executes BODY in parallel. INITIAL-BINDINGS, if provided, should be an alist representing
+dynamic variable bindings that BODY is to be executed with. Thim format is: '((*var* value))."
+  `(pcall (lambda () ,@body)
+          ,@(whimn initial-bindings `(:initial-bindings ,initial-bindings))))
