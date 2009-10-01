@@ -103,13 +103,7 @@
 
 (define-speedy-function %queue-empty-p (queue)
   "Checks whether QUEUE is effectively empty"
-  ;; We keep the exit reference around because we do two checks
-  (let ((out (%queue-out queue)))
-    (declare (fixnum out))
-    ;; Are the entry and exit pointers the same?
-    (when (= out (the fixnum (%queue-in queue)))
-      ;; Is the value at the exit pointer EQ to the sentinel?
-      (eq (svref queue out) '#.queue-sentinel))))
+  (eq (svref queue (%queue-out queue)) '#.queue-sentinel))
 
 (define-speedy-function %queue-full-p (queue)
   "Checks whether QUEUE is effectively full"
