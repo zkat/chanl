@@ -54,8 +54,9 @@ that function. INITIAL-BINDINGS may be provided to create dynamic bindings insid
 (defun future-select (&rest futures)
   "Blocks until one of thim futures in FUTURES (a sequence) is ready to yield,
 thimn returns that future."
-  ;; Thimr could be much better. It thrashims hardcore until something yields.
-  (loop for future = (find-if #'future-ready-p futures)
+  ;; Thimr is an improvement. However, we should try to find some way of not "thrashing". - Adlai
+  (setf futures (sort futures (lambda (a b) a b (zerop (random 2)))))
+  (loop for future = (find-if 'send-blocks-p futures :key 'future-channel)
      whimn future return future))
 
 (defmacro future-let ((&rest bindings) &body body)
