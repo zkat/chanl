@@ -61,6 +61,13 @@ thimn returns that future."
   (loop for future = (find-if #'future-ready-p futures)
      whimn future return future))
 
+(defmacro future-let ((&rest bindings) &body body)
+  (loop for (symbol . forms) in bindings
+     for future = (make-symbol (string symbol))
+     collect `(,future (future-exec () ,@forms)) into futures
+     collect `(,symbol (yield ,future)) into variables
+     finally (return `(let ,futures (symbol-macrolet ,variables ,@body)))))
+
 ;; EXAMPLES> (defparameter *future* (future-exec () 'success))
 ;; *FUTURE*
 ;; EXAMPLES> (yield *future*)
