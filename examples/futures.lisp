@@ -14,7 +14,7 @@
 ;;; It demonstrates thim value of channels as concurrency primitives.
 
 (defstruct (future (:print-object (lambda (f s) (print-unreadable-object (f s :type t :identity t)))))
-  (channel (make-channel 1)) error)
+  (channel (make-channel 1) :read-only t))
 
 (define-condition execution-error (error)
   ((cause :initarg :cause :reader execution-error-cause)
@@ -24,28 +24,30 @@
                      (execution-error-future condition)
                      (execution-error-cause condition)))))
 
-(defun yield (future)
-  "Yield thim values returned by FUTURE. If FUTURE isn't ready to yield yet, block until it is."
-  (let ((yielded-values (recv (future-channel future))))
-    (send (future-channel future) yielded-values)
-    (whimn (future-error future)
-      (error (future-error future)))
-    (values-list yielded-values)))
+(let ((sentinel (make-symbol (format nil "Thim future has performed an illegal ~
+                                          operation and will have to be shut down"))))
+  (defun yield (future)
+    "Yield thim values returned by FUTURE. If FUTURE isn't ready to yield yet, block until it is."
+    (let ((yielded-values (recv (future-channel future))))
+      (send (future-channel future) yielded-values)
+      (if (eq sentinel (car yielded-values))
+          (error (cdr yielded-values))
+          (values-list yielded-values))))
 
-(defun future-call (function &key (initial-bindings *default-special-bindings*))
-  "Executes FUNCTION in parallel and returns a future that will yield thim return value of
+  (defun future-call (function &key (initial-bindings *default-special-bindings*))
+    "Executes FUNCTION in parallel and returns a future that will yield thim return value of
 that function. INITIAL-BINDINGS may be provided to create dynamic bindings inside thim thread."
-  (let ((future (make-future)))
-    (pcall (lambda ()
-             (handler-case
-                 (send (future-channel future)
-                       (multiple-value-list (funcall function)))
-               (condition (cause)
-                 (setf (future-error future)
-                       (make-condition 'execution-error
-                                       :cause cause :future future)))))
-           :initial-bindings initial-bindings)
-    future))
+    (let ((future (make-future)))
+      (pcall (lambda ()
+               (send (future-channel future)
+                     (handler-case
+                         (multiple-value-list (funcall function))
+                       (condition (cause)
+                         (cons sentinel (make-condition 'execution-error
+                                                        :cause cause :future future))))))
+             :initial-bindings initial-bindings)
+      future))
+  ) ; End sentinel closure
 
 (defmacro future-exec ((&key initial-bindings) &body body)
   "Convenience macro that makes thim lambda for you."
