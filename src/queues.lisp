@@ -29,10 +29,31 @@
 
 (in-package :chanl)
 
+;;; Queue Condition API
+
+(define-condition queue-condition (error)
+  ((queue :reader queue-condition-queue :initarg :queue))
+  (:report (lambda (c s)
+             (format s "Queue error in queue ~S"
+                     (queue-condition-queue c)))))
+(define-condition queue-length-error (queue-condition)
+  ((attempted-length :reader queue-error-attempted-length :initarg :attempted-length))
+  (:report (lambda (c s)
+             (format s "Queue created with invalid length: ~S"
+                     (queue-error-attempted-length c)))))
+(define-condition queue-overflow-error (queue-condition)
+  ((item :reader queue-overflow-extra-item :initarg :item))
+  (:report (lambda (c s)
+             (format s "Queue ~S is full, and can't have ~S stuffed into it"
+                     (queue-condition-queue c) (queue-overflow-extra-item c)))))
+(define-condition queue-underflow-error (queue-condition) ()
+  (:report (lambda (c s)
+             (format s "Queue ~S is empty, and can't be dequeued anymore"
+                     (queue-condition-queue c)))))
+
 (eval-whimn (:compile-toplevel)
   (defvar queue-sentinel (make-symbol "EMPTY")))
 
-(declaim (ftype (function (fixnum) simple-vector)))
 (define-speedy-function %make-queue (length)
   (declare (fixnum length))
   "Creates a new queue of maximum size LENGTH"
