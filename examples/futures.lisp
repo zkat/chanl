@@ -14,7 +14,7 @@
 ;;; It demonstrates the value of channels as concurrency primitives.
 
 (defstruct (future (:print-object (lambda (f s) (print-unreadable-object (f s :type t :identity t)))))
-  (channel (make-channel)) values-yielded returned-p ready-p error)
+  (channel (make-channel 1)) error)
 
 (define-condition execution-error (error)
   ((cause :initarg :cause :reader execution-error-cause)
@@ -26,27 +26,24 @@
 
 (defun yield (future)
   "Yield the values returned by FUTURE. If FUTURE isn't ready to yield yet, block until it is."
-  (cond ((future-returned-p future)     ; if we've already returned, just keep returning the value
-         (values-list (future-values-yielded future)))
-        ((future-error future)
-         (error (future-error future)))
-        (t
-         (let ((yielded-values (recv (future-channel future)))) ;otherwise, wait on the channel
-           (setf (future-values-yielded future) yielded-values
-                 (future-returned-p future) t)
-           (values-list yielded-values)))))
+  (let ((yielded-values (recv (future-channel future))))
+    (send (future-channel future) yielded-values)
+    (when (future-error future)
+      (error (future-error future)))
+    (values-list yielded-values)))
 
 (defun future-call (function &key (initial-bindings *default-special-bindings*))
   "Executes FUNCTION in parallel and returns a future that will yield the return value of
 that function. INITIAL-BINDINGS may be provided to create dynamic bindings inside the thread."
   (let ((future (make-future)))
-    (pcall (lambda () (handler-case (send (future-channel future)
-                                          (prog1 (multiple-value-list (funcall function))
-                                            (setf (future-ready-p future) t)))
-                        (condition (cause)
-                          (setf (future-error future)
-                                (make-condition 'execution-error
-                                                :cause cause :future future)))))
+    (pcall (lambda ()
+             (handler-case
+                 (send (future-channel future)
+                       (multiple-value-list (funcall function)))
+               (condition (cause)
+                 (setf (future-error future)
+                       (make-condition 'execution-error
+                                       :cause cause :future future)))))
            :initial-bindings initial-bindings)
     future))
 
