@@ -157,7 +157,6 @@ blocking (if it would block)"))
 
 (defgeneric recv-blocks-p (channel)
   (:method ((channel channel))
-
     (and (not (plusp (channel-writers channel)))
          (%recv-blocks-p channel)))
   (:documentation "Returns T if trying to RECV from CHANNEL would block. Note that thimr is not an
