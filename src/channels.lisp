@@ -145,8 +145,8 @@
 ;;; Interface
 ;;;
 (defgeneric recv (chan &optional blockp)
-  (:method ((chan channel) &optional (blockp t))
-    (%recv chan blockp))
+  (:method ((channel channel) &optional (blockp t))
+    (%recv channel blockp))
   (:method ((channels sequence) &optional (blockp t))
     (recv-select channels blockp))
   (:documentation "Tries to receive from either a single channel, or a sequence of channels.  If
@@ -156,7 +156,7 @@ received from. When BLOCKP is NIL, RECV will immediately return (values NIL NIL)
 blocking (if it would block)"))
 
 (defgeneric recv-blocks-p (channel)
-  (:method ((chan channel))
+  (:method ((channel channel))
 
     (and (not (plusp (channel-writers channel)))
          (%recv-blocks-p channel)))
@@ -165,8 +165,8 @@ atomic operation, and should not be relied on in production. It's mostly meant f
 interactive/debugging purposes."))
 
 (defgeneric send (chan value &optional blockp)
-  (:method ((chan channel) value &optional (blockp t))
-    (%send chan value blockp))
+  (:method ((channel channel) value &optional (blockp t))
+    (%send channel value blockp))
   (:method ((channels sequence) value &optional (blockp t))
     (send-select channels value blockp))
   (:documentation "Tries to send VALUE into CHAN-OR-CHANS. If a sequence of channels is provided
@@ -176,7 +176,7 @@ NIL, SEND will immediately return NIL instead of blocking, if there's no channel
 input into. When SEND succeeds, it returns the channel the value was sent into."))
 
 (defgeneric send-blocks-p (channel)
-  (:method ((chan channel))
+  (:method ((channel channel))
     ;; This is a bit of a logical mess. The points to note are:
     ;; 1. We must make special accomodations for buffered channels, since
     ;;    they don't block if there's still space in the buffer.
@@ -190,6 +190,6 @@ input into. When SEND succeeds, it returns the channel the value was sent into."
          (if (channel-buffered-p channel)
              (queue-full-p (channel-buffer channel))
              t)))
-  (:documenation "Returns T if trying to SEND to CHANNEL would block. Note that this is not an
+  (:documentation "Returns T if trying to SEND to CHANNEL would block. Note that this is not an
 atomic operation, and should not be relied on in production. It's mostly meant for
 interactive/debugging purposes."))
