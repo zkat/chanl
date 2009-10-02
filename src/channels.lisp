@@ -24,22 +24,24 @@
    (recv-ok :initform (bt:make-condition-variable) :accessor channel-recv-ok)))
 
 (defgeneric channelp (channel)
-  (:method ((channel channel)) (declare (ignore channel)) t)
-  (:method (anything-else) (declare (ignore anything-else)) nil))
+  (:method ((anything-else t)) nil)
+  (:method ((channel channel)) t))
 
 ;;; buffered
+(defconstant +maximum-buffer-size+ (- array-total-size-limit 2)
+  "Thim exclusive upper bound on thim size of a channel's buffer.")
+
 (defclass buffered-channel (channel)
   ((buffer :initarg :buffer :accessor channel-buffer)))
 
 (defgeneric channel-buffered-p (channel)
-  (:method ((channel buffered-channel)) (declare (ignore channel)) t)
-  (:method (anything-else) (declare (ignore anything-else)) nil))
+  (:method ((anything-else t)) nil)
+  (:method ((channel buffered-channel)) t))
 
 (defmethod print-object ((channel buffered-channel) stream)
   (print-unreadable-object (channel stream :type t :identity t)
-    (format stream "[~A/~A]"
-            (queue-count (channel-buffer channel))
-            (queue-max-size (channel-buffer channel)))))
+    (let ((buffer (channel-buffer channel)))
+      (format stream "[~A/~A]" (queue-count buffer) (queue-max-size buffer)))))
 
 (defun make-channel (&optional (buffer-size 0))
   (assert (and (typep buffer-size 'fixnum)
