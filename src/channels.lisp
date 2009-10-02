@@ -119,11 +119,6 @@ interactive/debugging purposes."))
 
 ;;; Sending
 (defmacro with-read-state ((channel) &body body)
-  ;; Basically, a poor man's semaphore implementation in macro form!
-  ;; The idea behind the 'read state' is to have a *second* sentinel, of sorts,
-  ;; that allows us to catch a corner case that I discussed with pkhuong before,
-  ;; but completely forgot the details about. Figure it out. If you do, be sure
-  ;; to update this :P -- zkat
   `(unwind-protect
         (progn (incf (channel-readers ,channel))
                ,@body)
