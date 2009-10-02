@@ -42,7 +42,8 @@
             (queue-max-size (channel-buffer channel)))))
 
 (defun make-channel (&optional (buffer-size 0))
-  (assert (not (minusp buffer-size)) () "Buffer size cannot be negative.")
+  (assert (and (fixnump buffer-size)
+               (not (minusp buffer-size))) () "Buffer size must be a non-negative fixnum..")
   (cond ((> buffer-size 0)
          (make-instance 'buffered-channel :buffer (make-queue buffer-size)))
         ((= buffer-size 0)
