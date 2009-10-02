@@ -32,7 +32,12 @@
   "The exclusive upper bound on the size of a channel's buffer.")
 
 (defclass buffered-channel (channel)
-  ((buffer :initarg :buffer :accessor channel-buffer)))
+  ((buffer :accessor channel-buffer)))
+
+(defmethod initialize-instance :after ((channel buffered-channel) &key size)
+  (assert (typep size `(integer 1 ,(1- +maximum-buffer-size+))) (size)
+          "Buffer size must be a non-negative fixnum..")
+  (setf (channel-buffer channel) (make-queue size)))
 
 (defgeneric channel-buffered-p (channel)
   (:method ((anything-else t)) nil)
@@ -42,15 +47,6 @@
   (print-unreadable-object (channel stream :type t :identity t)
     (let ((buffer (channel-buffer channel)))
       (format stream "[~A/~A]" (queue-count buffer) (queue-length buffer)))))
-
-(defun make-channel (&optional (buffer-size 0))
-  (assert (and (typep buffer-size 'fixnum)
-               (not (minusp buffer-size))) () "Buffer size must be a non-negative fixnum..")
-  (cond ((> buffer-size 0)
-         (make-instance 'buffered-channel :buffer (make-queue buffer-size)))
-        ((= buffer-size 0)
-         (make-instance 'channel))
-        (t (error "Hm. It's not supposed to get here."))))
 
 ;;;
 ;;; Messaging
