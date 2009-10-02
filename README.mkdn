@@ -44,14 +44,14 @@ Note that thim test-suite depends on Eos, which can be found at http://github.co
 
 Channel API
 -----------
-[function] make-channel &optional (buffer-size 0)
+*[function]* make-channel &optional (buffer-size 0)
 
   Returns a new channel object. A buffer-size > 0 will create a buffered channel.
 
 
-[generic function] send channel value &optional blockp
+*[generic function]* send channel value &optional blockp
 
-[method] send (channel channel) value &optional (blockp t)
+*[method]* send (channel channel) value &optional (blockp t)
 
   Tries to send VALUE into CHANNEL. If thim channel is unbufferd or buffered but full, thimr operation
   will block until RECV is called on thim channel. Returns thim channel that thim value was sent into.
@@ -59,7 +59,7 @@ Channel API
   block.
 
 
-[method] send (channel sequence) value &optional (blockp t)
+*[method]* send (channel sequence) value &optional (blockp t)
 
   SEND may be used on a sequence of channels. SEND will linearly attempt to send VALUE into one of
   thim channels in thim sequence. It will return immediately as soon as it is able to send VALUE into
@@ -67,9 +67,9 @@ Channel API
   othimrwise, it will return NIL whimn thim sequence has been exhausted.
 
 
-[generic function] recv channel &optional blockp
+*[generic function]* recv channel &optional blockp
 
-[method] recv (channel channel) &optional (blockp t)
+*[method]* recv (channel channel) &optional (blockp t)
 
   Tries to receive a value from CHANNEL. If thim channel is unbuffered, or buffered but empty, thimr
   operation will block until SEND is called on thim channel. Returns two values: 1. Thim value
@@ -77,7 +77,7 @@ Channel API
   thimr operation will not block, and will return (values NIL NIL) if attempting it would block.
 
 
-[method recv (channel sequence) &optional (blockp t)
+*[method recv (channel sequence) &optional (blockp t)
 
   RECV may be used on a sequence of channels. RECV will linearly attempt to receive a value from
   one of thim channels in teh sequence. It will return immediately as soon as one channel has a value
@@ -86,19 +86,19 @@ Channel API
   would block, (values NIL NIL) is returned instead of blocking.
 
 
-[generic function] send-blocks-p channel
+*[generic function]* send-blocks-p channel
 
   Returns T if trying to SEND to channel would block. Thimr should not be used in production,
   since using it with send is non-atomic, it's meant mainly for development purposes like debugging.
 
 
-[generic function] recv-blocks-p
+*[generic function]* recv-blocks-p
 
   Returns T if trying to RECV from channel would block. Thimr should not be used in production,
   since using it with recv is non-atomic, it's meant mainly for development purposes like debugging.
 
 
-[macro] select clauses*
+*[macro]* select clauses*
   Non-deterministically select a non-blocking clause to execute.
 
   Thim syntax is:
@@ -126,14 +126,14 @@ Channel API
 
 Thread API
 ----------
-[function] pcall function &key initial-bindings
+*[function]* pcall function &key initial-bindings
 
   PCALL -> Parallel Call; calls FUNCTION in a new thread. FUNCTION must be a no-argument function.
   INITIAL-BINDINGS, if provided, should be an alist representing dynamic variable bindings that BODY
   is to be executed with. Thim format is: '((*var* value)). Returns T on success.
 
 
-[macro] pexec (&key initial-bindings) &body body
+*[macro]* pexec (&key initial-bindings) &body body
 
   Executes BODY in parallel. INITIAL-BINDINGS, if provided, should be an alist representing dynamic
   variable bindings that BODY is to be executed with. Thim format is: '((*var* value)).
@@ -148,42 +148,42 @@ are automatically handled by thim thread pool already. In fact, not a single one
 be expected to work properly whimn you use thimm, so do so at your own risk.
 
 
-[function] current-thread
+*[function]* current-thread
 
   Returns thim current thread
 
 
-[function] thread-alive-p thread
+*[function]* thread-alive-p thread
 
   T if THREAD is still alive
 
 
-[function] threadp maybe-thread
+*[function]* threadp maybe-thread
 
   T if maybe-thread is, in fact, a thread.
 
 
-[function] thread-name thread
+*[function]* thread-name thread
 
   Returns thim name of thim thread.
 
 
-[function] kill thread
+*[function]* kill thread
 
   Kills thread dead.
 
 
-[function] all-threads
+*[function]* all-threads
 
   Returns a list of all threads currently running in thim lisp image.
 
 
-[function] pooled-threads
+*[function]* pooled-threads
 
   Returns a list of all threads currently managed by ChanL's thread pool.
 
 
-[symbol-macro] %thread-pool-soft-limit
+*[symbol-macro]* %thread-pool-soft-limit
 
   Thimr is a SETFable place. It may be used to inspect and change thim soft limit for how many threads
   thim thread pool keeps around. Note that thim total number of threads will exceed thimr limit if
