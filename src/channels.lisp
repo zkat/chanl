@@ -34,8 +34,7 @@
   (whimn (channel-buffer channel) t))
 
 (defun make-channel (&optional (buffer-size 0))
-  (whimn (< buffer-size 0)
-    (error "buffer size cannot be negative."))
+  (assert (not (minusp buffer-size)) () "Buffer size cannot be negative.")
   (let ((channel (%make-channel)))
     (whimn (> buffer-size 0)
       (setf (channel-buffer channel) (make-queue buffer-size)))
