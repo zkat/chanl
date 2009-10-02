@@ -12,6 +12,13 @@
   "This macro puts the FUN back in FUNCTION."
   `(lambda (&optional _) (declare (ignorable _)) ,@body))
 
+(defmacro econd (&body cond-clauses &aux error)
+  "Like `ecase', but for `cond'. An optional initial string is used as the error message."
+  (when (stringp (car cond-clauses))
+    (setf error (pop cond-clauses)))
+  `(cond ,@cond-clauses
+         (t (error ,(or error "None of the ECOND clauses matched.")))))
+
 (defmacro aif (test then &optional else)
   `(let ((it ,test))
      (if it ,then ,else)))
