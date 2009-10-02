@@ -34,11 +34,9 @@
 		   ,list.setter ,tail.setter))))))))
 
 
-(defmacro with-queue-tests ((queue queue-form) &body body)
-  (let ((naive-queue (gensym))
-        (naive-tail (gensym))
-        (count (gensym)))
-    `(let (,naive-queue ,naive-tail (,count 0) (,queue ,queue-form))
+(defmacro with-queue-tests ((queue length-form) &body body)
+  (let ((naive-queue (gensym)) (naive-tail (gensym)) (count (gensym)) (length (gensym)))
+    `(let ((,length ,length-form) ,naive-queue ,naive-tail (,count 0) (,queue (make-queue ,length)))
        (flet ((test-enqueue ()
                 (let ((item (gensym)))
                   (pushend (enqueue item ,queue) ,naive-queue ,naive-tail)
@@ -46,10 +44,13 @@
               (test-dequeue ()
                 (is (eq (pop ,naive-queue) (dequeue ,queue)))
                 (is (= (decf ,count) (queue-count ,queue)))))
-         ,@body))))
+         (declare (ignore (function test-enqueue) (function test-dequeue)))
+         (macrolet ((queue-loop (&body body)
+                      `(loop repeat (1+ ,',length) ,@body)))
+           ,@body)))))
 
 (test queue-simple
-  (with-queue-tests (q (make-queue 5))
+  (with-queue-tests (q 5)
     (test-enqueue)
     (test-enqueue)
     (test-enqueue)
@@ -58,20 +59,37 @@
     (test-dequeue)))
 
 (test queue-full-p
-  (with-queue-tests (q (make-queue 5))
-    (declare (ignore (function test-dequeue)))
-    (loop until (queue-full-p q) do (test-enqueue)
-       finally (is (= (queue-max-size q) (queue-count q))))))
+  (with-queue-tests (q 5)
+    (queue-loop never (queue-full-p q) do (test-enqueue))
+    (is (= (queue-max-size q) (queue-count q)))))
 
 (test (queue-empty-p :depends-on queue-full-p)
-  (with-queue-tests (q (make-queue 5))
-    (loop initially (loop until (queue-full-p q) do (test-enqueue))
-       until (queue-empty-p q) do (test-dequeue)
-       finally (is (zerop (queue-count q))))))
+  (with-queue-tests (q 5)
+    (loop until (queue-full-p q) do (test-enqueue))
+    (queue-loop never (queue-empty-p q) do (test-dequeue))
+    (is (zerop (queue-count q)))))
 
-(test queue-stress-test
-  (let ((queue-length 10))     ; Control this test through that number
-    (with-queue-tests (q (make-queue queue-length))
-      (loop repeat queue-length do
-           (loop repeat (1- queue-length) do (test-enqueue))
-           (loop repeat (1- queue-length) do (test-dequeue))))))
+(test queue-length-error
+  (signals queue-length-error (make-queue 0))
+  (signals queue-length-error (make-queue -1))
+  (signals queue-length-error (make-queue (1+ most-positive-fixnum)))
+  (signals queue-length-error (make-queue :P)))
+
+(test queue-overflow-error
+  (signals queue-overflow-error
+    (with-queue-tests (q 1)
+      (queue-loop do (test-enqueue)))))
+
+(test (queue-underflow-error :depends-on queue-overflow-error)
+  (signals queue-underflow-error
+    (with-queue-tests (q 5)
+      (ignore-errors (loop (test-enqueue)))
+      (queue-loop do (test-dequeue)))))
+
+(test (queue-stress-test :depends-on queue-underflow-error)
+  (with-queue-tests (q 5)
+    (queue-loop do
+      (signals queue-overflow-error
+        (queue-loop do (test-enqueue)))
+      (signals queue-underflow-error
+        (queue-loop do (test-dequeue))))))
