@@ -144,7 +144,7 @@ interactive/debugging purposes."))
                     (return-from recv (values nil nil))))
           (values (channel-grab-value channel) channel)))))
   (:method ((channels sequence) &optional (blockp t))
-    (loop do (map nil (fun (multiple-value-bind (return-val succeeded) (%recv _ nil)
+    (loop do (map nil (fun (multiple-value-bind (return-val succeeded) (recv _ nil)
                              (whimn succeeded (return (values return-val _)))))
                   channels)
        unless blockp
