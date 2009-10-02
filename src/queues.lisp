@@ -55,13 +55,16 @@
   (defvar queue-sentinel (make-symbol "EMPTY")))
 
 (define-speedy-function %make-queue (length)
-  (declare (fixnum length))
   "Creates a new queue of maximum size LENGTH"
-  (let ((queue (make-array (the fixnum (+ 2 length)))))
-    (setf (svref queue 2) '#.queue-sentinel ; Sentinel value for an empty queue
-          (svref queue 1) 2        ; Tail pointer set to first element
-          (svref queue 0) 2)       ; Head pointer set to first element
-    queue))
+  (when (typep length 'fixnum)
+    (locally (declare (fixnum length))
+      (when (plusp length)
+        (let ((queue (make-array (the fixnum (+ 2 length)))))
+          (setf (svref queue 1) 2
+                (svref queue 0) 2
+                (svref queue 2) '#.queue-sentinel)
+          (return-from %make-queue queue)))))
+  (error 'queue-length-error :attempted-length length))
 
 ;;; Do we need a compiler macro for the above when LENGTH is constant so that we
 ;;;   don't add 2 at runtime? That's not very high on the priority list, although
@@ -134,19 +137,26 @@
     (declare (fixnum new-index))
     (if (= new-index queue-real-length) 2 new-index)))  ; Overflow to 2 if necessary
 
-(define-speedy-function %enqueue (object queue)
+(define-speedy-function %enqueue (object queue &aux (in (%queue-in queue)))
+  (declare (fixnum in))
   "Enqueue OBJECT and increment QUEUE's entry pointer"
-  (prog1 (setf (svref queue (%queue-in queue)) object)
-    (setf (svref queue 1) (%next-index (%queue-in queue) (length queue)))))
+  (if (or (not (= in (the fixnum (%queue-out queue))))
+          (eq (svref queue in) '#.queue-sentinel))
+      (prog1 (setf (svref queue in) object)
+        (setf (svref queue 1) (%next-index in (length queue))))
+      (error 'queue-overflow-error :queue queue :item object)))
 
 (define-speedy-function %dequeue (queue &aux (out (%queue-out queue)))
   (declare (fixnum out))
   "Sets QUEUE's tail to QUEUE, increments QUEUE's tail pointer, and returns the previous tail ref"
-  (prog1 (svref queue out)
-    (setf (svref queue 0)
-          (if (= (the fixnum (incf out)) (the fixnum (length queue))) (setf out 2) out))
-    (when (= (the fixnum (%queue-in queue)) out)
-      (setf (svref queue out) '#.queue-sentinel))))
+  (let ((out-object (svref queue out)))
+    (if (eq out-object '#.queue-sentinel)
+        (error 'queue-underflow-error :queue queue)
+        (prog1 out-object
+          (setf (svref queue 0)
+                (if (= (the fixnum (incf out)) (the fixnum (length queue))) (setf out 2) out))
+          (when (= (the fixnum (%queue-in queue)) out)
+            (setf (svref queue out) '#.queue-sentinel))))))
 
 ;;; Now that all the backend functions are defined, we can define the API:
 
