@@ -41,7 +41,7 @@
 (defmethod print-object ((channel buffered-channel) stream)
   (print-unreadable-object (channel stream :type t :identity t)
     (let ((buffer (channel-buffer channel)))
-      (format stream "[~A/~A]" (queue-count buffer) (queue-max-size buffer)))))
+      (format stream "[~A/~A]" (queue-count buffer) (queue-length buffer)))))
 
 (defun make-channel (&optional (buffer-size 0))
   (assert (and (typep buffer-size 'fixnum)
