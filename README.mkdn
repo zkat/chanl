@@ -47,9 +47,25 @@ Note that the test-suite depends on Eos, which can be found at http://github.com
 
 Channel API
 -----------
-*[function]* make-channel &optional (buffer-size 0)
+*[generic function]* make-instance class &rest initargs &key &allow-other-keys
 
-  Returns a new channel object. A buffer-size > 0 will create a buffered channel.
+*[method]* make-instance (class channel) &rest initargs
+
+  Returns a new channel object.
+
+*[method]* make-instance (class buffered-channel) &key size &rest initargs
+
+  Creates a new buffered channel object. The buffer has a maximum size of SIZE.
+
+  SIZE must be positive and less than +maximum-buffer-size+.
+
+
+*[constant]* +maximum-buffer-size+
+
+  This constant has an implementation-dependant value, fixed when ChanL is loaded. It is the largest
+  size which a channel's buffer could possibly hold.
+
+  Note that this value might be further limited by memory constraints.
 
 
 *[generic function]* send channel value &optional blockp
