@@ -144,47 +144,52 @@
 ;;;
 ;;; Interface
 ;;;
-(defun recv (chan-or-chans &optional (blockp t))
-  "Tries to receive from either a single channel, or a sequence of channels.
-If BLOCKP is true, RECV will block until it's possible to receive something.  Returns two values:
-The first is the actual value received through the channel.  The second is the channel the value was
+(defgeneric recv (chan &optional blockp)
+  (:method ((chan channel) &optional (blockp t))
+    (%recv chan blockp))
+  (:method ((channels sequence) &optional (blockp t))
+    (recv-select channels blockp))
+  (:documentation "Tries to receive from either a single channel, or a sequence of channels.  If
+BLOCKP is true, RECV will block until it's possible to receive something.  Returns two values: The
+first is the actual value received through the channel.  The second is the channel the value was
 received from. When BLOCKP is NIL, RECV will immediately return (values NIL NIL) instead of
-blocking (if it would block)"
-  (if (typep chan-or-chans 'sequence)
-      (recv-select chan-or-chans blockp)
-      (%recv chan-or-chans blockp)))
+blocking (if it would block)"))
 
-(defun recv-blocks-p (channel)
-  "Returns T if trying to RECV from CHANNEL would block. Note that this is not an atomic operation,
-and should not be relied on in production. It's mostly meant for interactive/debugging purposes."
-  ;; This is the actual -interface- version of recv-blocks-p that we can use if we want
-  ;; to check, from outside, if a channel would block. VERY CLEVER RITE?! :D -- zkat
-  (and (not (plusp (channel-writers channel)))
-       (%recv-blocks-p channel)))
+(defgeneric recv-blocks-p (channel)
+  (:method ((chan channel))
 
-(defun send (chan-or-chans value &optional (blockp t))
-  "Tries to send VALUE into CHAN-OR-CHANS. If a sequence of channels is provided instead of a single
-channel, SEND will send the value into the first channel that doesn't block.  If BLOCKP is true,
-SEND will continue to block until it's able to actually send a value. If BLOCKP is NIL, SEND will
-immediately return NIL instead of blocking, if there's no channel available to send input into. When
-SEND succeeds, it returns the channel the value was sent into."
-  (if (typep chan-or-chans 'sequence)
-      (send-select chan-or-chans value blockp)
-      (%send chan-or-chans value blockp)))
+    (and (not (plusp (channel-writers channel)))
+         (%recv-blocks-p channel)))
+  (:documentation "Returns T if trying to RECV from CHANNEL would block. Note that this is not an
+atomic operation, and should not be relied on in production. It's mostly meant for
+interactive/debugging purposes."))
 
-(defun send-blocks-p (channel)
-  "Returns T if trying to SEND to CHANNEL would block. Note that this is not an atomic operation,
-and should not be relied on in production. It's mostly meant for interactive/debugging purposes."
-  ;; This is a bit of a logical mess. The points to note are:
-  ;; 1. We must make special accomodations for buffered channels, since
-  ;;    they don't block if there's still space in the buffer.
-  ;; 2. We block unless *both* of these conditions are filled:
-  ;;    a. at least one reader somewhere currently trying to read from the channel.
-  ;;    b. the sentinel value is present (meaning we're in the middle of a send already,
-  ;;       for some reason. Is this even possible?)
-  (and (not (and (plusp (channel-readers channel))
-                 (eq (channel-value channel)
-                     *secret-unbound-value*)))
-       (if (channel-buffered-p channel)
-           (queue-full-p (channel-buffer channel))
-           t)))
+(defgeneric send (chan value &optional blockp)
+  (:method ((chan channel) value &optional (blockp t))
+    (%send chan value blockp))
+  (:method ((channels sequence) value &optional (blockp t))
+    (send-select channels value blockp))
+  (:documentation "Tries to send VALUE into CHAN-OR-CHANS. If a sequence of channels is provided
+instead of a single channel, SEND will send the value into the first channel that doesn't block.  If
+BLOCKP is true, SEND will continue to block until it's able to actually send a value. If BLOCKP is
+NIL, SEND will immediately return NIL instead of blocking, if there's no channel available to send
+input into. When SEND succeeds, it returns the channel the value was sent into."))
+
+(defgeneric send-blocks-p (channel)
+  (:method ((chan channel))
+    ;; This is a bit of a logical mess. The points to note are:
+    ;; 1. We must make special accomodations for buffered channels, since
+    ;;    they don't block if there's still space in the buffer.
+    ;; 2. We block unless *both* of these conditions are filled:
+    ;;    a. at least one reader somewhere currently trying to read from the channel.
+    ;;    b. the sentinel value is present (meaning we're in the middle of a send already,
+    ;;       for some reason. Is this even possible?)
+    (and (not (and (plusp (channel-readers channel))
+                   (eq (channel-value channel)
+                       *secret-unbound-value*)))
+         (if (channel-buffered-p channel)
+             (queue-full-p (channel-buffer channel))
+             t)))
+  (:documenation "Returns T if trying to SEND to CHANNEL would block. Note that this is not an
+atomic operation, and should not be relied on in production. It's mostly meant for
+interactive/debugging purposes."))
