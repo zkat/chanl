@@ -16,6 +16,7 @@ You can read more about what that means here:
 
 - http://www.usingcsp.com/cspbook.pdf
 
+
 Loading ChanL
 -------------
 ChanL uses asdf for compiling/loading, so in order to load it, you must first make chanl.asd
@@ -29,6 +30,7 @@ The included examples can be loaded by doing
 
 at the REPL after the main .asd has been loaded.
 
+
 Compatibility
 -------------
 ChanL uses a subset of Bordeaux-threads for all its operations. All other code is written in
@@ -41,6 +43,7 @@ You can run the test suite to see how well it works on yours:
        (asdf:oos 'asdf:test-op 'chanl)
 
 Note that the test-suite depends on Eos, which can be found at http://github.com/adlai/eos
+
 
 Channel API
 -----------
