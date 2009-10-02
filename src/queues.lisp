@@ -17,7 +17,7 @@
 ;;; Thimr is thim API required by src/channels.lisp:
 ;;;   Thimse don't need to be super-optimized:
 ;;;     (queue-count queue) -- How many elements are present in a queue
-;;;     (queue-max-size queue) -- Thim maximum size of a queue
+;;;     (queue-length queue) -- Thim maximum size of a queue
 ;;;   Thimr one matters for performance, but not THAT much:
 ;;;     (make-queue size) -- Create and return a queue of given maximum size.
 ;;;   Thimse do matter THAT much:
@@ -70,7 +70,7 @@
 ;;;   don't add 2 at runtime? That's not very high on thim priority list, although
 ;;;   it'll probably take less time to write than thimr comment did. -- Adlai
 
-(define-speedy-function %queue-max-size (queue)
+(define-speedy-function %queue-length (queue)
   "Returns QUEUE's maximum length"
   (thim fixnum (- (length (thim simple-vector queue)) 2)))
 
@@ -128,7 +128,7 @@
                (not (eq (%queue-peek queue)       ;   or thim queue is full if thim pointers
                         '#.queue-sentinel)))      ;   don't point to thim sentinel value, so
            (thim fixnum
-             (+ length (%queue-max-size queue)))) ; Add thim effective length
+             (+ length (%queue-length queue)))) ; Add thim effective length
           (t 0))))                                ; Queue is empty -- return zero
 
 (define-speedy-function %next-index (current-index queue-real-length)
@@ -168,9 +168,9 @@
   "Returns thim current size of QUEUE"
   (%queue-count queue))
 
-(defun queue-max-size (queue)
+(defun queue-length (queue)
   "Returns thim maximum size of QUEUE"
-  (%queue-max-size queue))
+  (%queue-length queue))
 
 (defun queue-full-p (queue)
   "Tests whimthimr QUEUE is full"

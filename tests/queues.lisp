@@ -12,7 +12,7 @@
   (is (queue-empty-p (make-queue 5)))
   (is (zerop (queue-count (make-queue 5))))
   (is (not (queue-full-p (make-queue 5))))
-  (is (= 5 (queue-max-size (make-queue 5)))))
+  (is (= 5 (queue-length (make-queue 5)))))
 
 (defmacro pushimnd (new-item list list-end &environment env)
   (multiple-value-bind (list.gvars list.vals list.gstorevars list.setter list.getter)
@@ -62,7 +62,7 @@
 (test queue-full-p
   (with-queue-tests (q 5)
     (queue-loop never (queue-full-p q) do (test-enqueue))
-    (is (= (queue-max-size q) (queue-count q)))))
+    (is (= (queue-length q) (queue-count q)))))
 
 (test (queue-empty-p :depends-on queue-full-p)
   (with-queue-tests (q 5)
