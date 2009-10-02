@@ -29,7 +29,7 @@
   (let ((chan (make-channel)))
     (is (channelp chan))
     (is (not (channel-buffered-p chan)))
-    (is (null (channel-buffer chan)))
+    (signals error (channel-buffer chan))
     (is (= 0 (channel-readers chan)))
     (is (= 0 (channel-writers chan)))
     (is (eq *secret-unbound-value* (channel-value chan)))
