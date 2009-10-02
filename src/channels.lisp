@@ -13,22 +13,29 @@
 ;;;
 ;;; Channel objects
 ;;;
-(defstruct (channel (:constructor %make-channel)
-                    (:predicate channelp)
-                    (:print-object
-                     (lambda (channel stream)
-                       (print-unreadable-object (channel stream :type t :identity t)
-                         (if (channel-buffered-p channel)
-                             (format stream "[~A/~A]"
-                                     (queue-count (channel-buffer channel))
-                                     (queue-max-size (channel-buffer channel)))
-                             (format stream "[unbuffered]"))))))
-  (value *secret-unbound-value*) buffer
-  (readers 0 :type fixnum) ; number of readers currently trying to read
-  (writers 0 :type fixnum)
-  (lock (bt:make-recursive-lock) :read-only t)
-  (send-ok (bt:make-condition-variable) :read-only t)
-  (recv-ok (bt:make-condition-variable) :read-only t))
+(defclass channel ()
+  ((value :initform *secret-unbound-value* :accessor channel-value)
+   (buffer :initform nil :accessor channel-buffer)
+   (readers :initform 0 :accessor channel-readers)
+   (writers :initform 0 :accessor channel-writers)
+   (lock :initform (bt:make-recursive-lock) :accessor channel-lock)
+   (send-ok :initform (bt:make-condition-variable) :accessor channel-send-ok)
+   (recv-ok :initform (bt:make-condition-variable) :accessor channel-recv-ok)))
+
+(defun %make-channel ()
+  (make-instance 'channel))
+
+(defgeneric channelp (channel)
+  (:method ((channel channel)) (declare (ignore channel)) t)
+  (:method (anything-else) (declare (ignore anything-else)) nil))
+
+(defmethod print-object ((channel channel) stream)
+  (print-unreadable-object (channel stream :type t :identity t)
+    (if (channel-buffered-p channel)
+        (format stream "[~A/~A]"
+                (queue-count (channel-buffer channel))
+                (queue-max-size (channel-buffer channel)))
+        (format stream "[unbuffered]"))))
 
 (defun channel-buffered-p (channel)
   (when (channel-buffer channel) t))
