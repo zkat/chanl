@@ -9,7 +9,7 @@
 (def-suite make-channel :in chanl)
 
 (test buffered
-  (let ((chan (make-channel 10)))
+  (let ((chan (make-instance 'buffered-channel :size 10)))
     (is (channelp chan))
     (is (channel-buffered-p chan))
     (is (queuep (channel-buffer chan)))
@@ -26,7 +26,7 @@
     (is (channel-recv-ok chan))))
 
 (test unbuffered
-  (let ((chan (make-channel)))
+  (let ((chan (make-instance 'channel)))
     (is (channelp chan))
     (is (not (channel-buffered-p chan)))
     (signals error (channel-buffer chan))
@@ -42,21 +42,21 @@
     (is (channel-recv-ok chan))))
 
 (test invalid
-  (signals error (make-channel nil))
-  (signals error (make-channel -1)))
+  (signals error (make-instance 'buffered-channel :size nil))
+  (signals error (make-instance 'buffered-channel :size -1)))
 
 (def-suite messaging :in chanl)
 (def-suite sending :in messaging)
 
 (test send-blocks-p
-  (let ((channel (make-channel)))
+  (let ((channel (make-instance 'channel)))
     (is (send-blocks-p channel))
     (pexec () (recv channel))
     (sleep 0.5) ; totally bogus way of letting threads get started.
     (is (not (send-blocks-p channel)))
     (send channel 'foo)
     (is (send-blocks-p channel)))
-  (let ((channel (make-channel 1)))
+  (let ((channel (make-instance 'buffered-channel :size 1)))
     (is (not (send-blocks-p channel)))
     (send channel 'test)
     (is (send-blocks-p channel))
