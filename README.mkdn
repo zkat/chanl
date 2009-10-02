@@ -7,8 +7,8 @@ if too many people try to use that truck, you, you get problems.  ChanL is not a
 series--it's a series of *tubes*."
   - Sen. Ted Stevens
 
-In a nutshell, you create various processes sequentially executing tasks you need done,
-and use channel objects to communicate and synchronize the state of these processes.
+In a nutshell, you create various threads sequentially executing tasks you need done,
+and use channel objects to communicate and synchronize the state of these threads.
 
 You can read more about what that means here:
 
@@ -16,14 +16,148 @@ You can read more about what that means here:
 
 - http://www.usingcsp.com/cspbook.pdf
 
-API
----
-Proper API documentation to come.
+Loading ChanL
+-------------
+ChanL uses asdf for compiling/loading, so in order to load it, you must first make chanl.asd
+visible to your lisp, then simply
+
+       (asdf:oos 'asdf:load-op 'chanl)
+
+The included examples can be loaded by doing
+
+       (asdf:oos 'asdf:load-op 'chanl.examples)
+
+at the REPL after the main .asd has been loaded.
+
+Compatibility
+-------------
+ChanL uses a subset of Bordeaux-threads for all its operations. All other code is written in
+ANSI CL, so any lisp with a BT-compatible thread library should be able to use this library.
+
+ChanL is mainly developed on Clozure CL and SBCL, although it's been casually tested on other lisps.
+
+You can run the test suite to see how well it works on yours:
+
+       (asdf:oos 'asdf:test-op 'chanl)
+
+Note that the test-suite depends on Eos, which can be found at http://github.com/adlai/eos
+
+Channel API
+-----------
+[function] make-channel &optional (buffer-size 0)
+  Returns a new channel object. A buffer-size > 0 will create a buffered channel.
+
+[generic function] send channel value &optional blockp
+
+[method] send (channel channel) value &optional (blockp t)
+  Tries to send VALUE into CHANNEL. If the channel is unbufferd or buffered but full, this operation
+  will block until RECV is called on the channel. Returns the channel that the value was sent into.
+  If blockp is NIL, NIL is returned immediately instead of a channel if attempting to send would
+  block.
+
+[method] send (channel sequence) value &optional (blockp t)
+  SEND may be used on a sequence of channels. SEND will linearly attempt to send VALUE into one of
+  the channels in the sequence. It will return immediately as soon as it is able to send VALUE into
+  one channel. If BLOCKP is T (default), SEND will continue to block until one operation succeeds,
+  otherwise, it will return NIL when the sequence has been exhausted.
+
+[generic function] recv channel &optional blockp
+
+[method] recv (channel channel) &optional (blockp t)
+  Tries to receive a value from CHANNEL. If the channel is unbuffered, or buffered but empty, this
+  operation will block until SEND is called on the channel. Returns two values: 1. The value
+  received through the channel, and 2. The channel the value was sent into. If BLOCKP is nil,
+  this operation will not block, and will return (values NIL NIL) if attempting it would block.
+
+[method recv (channel sequence) &optional (blockp t)
+  RECV may be used on a sequence of channels. RECV will linearly attempt to receive a value from
+  one of the channels in teh sequence. It will return immediately as soon as one channel has a value
+  available. As with the method for CHANNEL, this will return the value received, as well as the
+  channel the value was received from. If BLOCKP is NIL, and operating on all channels in sequence
+  would block, (values NIL NIL) is returned instead of blocking.
+
+[generic function] send-blocks-p channel
+  Returns T if trying to SEND to channel would block. This should not be used in production,
+  since using it with send is non-atomic, it's meant mainly for development purposes like debugging.
+
+[generic function] recv-blocks-p
+  Returns T if trying to RECV from channel would block. This should not be used in production,
+  since using it with recv is non-atomic, it's meant mainly for development purposes like debugging.
+
+[macro] select clauses*
+  Non-deterministically select a non-blocking clause to execute.
+
+  The syntax is:
+
+     select clause*
+     clause ::= (op form*)
+     op ::= (recv c &optional variable channel-var) | (send c value &optional channel-var)
+            | else | otherwise | t
+     c ::= An evaluated form representing a channel, or a sequence of channels.
+     variable ::= an unevaluated symbol RECV's return value is to be bound to.
+     value ::= An evaluated form representing a value to send into the channel.
+     channel-var ::= An unevaluated symbol that will be bound to the channel the SEND/RECV
+                     operation succeeded on.
+
+  SELECT will first attempt to find a clause with a non-blocking op, and execute it. Execution of
+  the check-if-blocks-and-do-it part is atomic, but execution of the clause's body once the
+  SEND/RECV clause executes is NOT atomic. If all channel clauses would block, and no else clause is
+  provided, SELECT will block until one of the clauses is available for execution.
+
+  SELECT's non-determinism is, in fact, very non-deterministic. Clauses are chosen at random, not in
+  the order they are written. It's worth noting that SEND/RECV, when used on sequences of channels,
+  are still linear in the way they go through the sequence -- the random selection is reserved for
+  individual SELECT clauses."
+
+Thread API
+----------
+[function] pcall function &key initial-bindings
+  PCALL -> Parallel Call; calls FUNCTION in a new thread. FUNCTION must be a no-argument function.
+  INITIAL-BINDINGS, if provided, should be an alist representing dynamic variable bindings that BODY
+  is to be executed with. The format is: '((*var* value)). Returns T on success.
+
+[macro] pexec (&key initial-bindings) &body body
+  Executes BODY in parallel. INITIAL-BINDINGS, if provided, should be an alist representing dynamic
+  variable bindings that BODY is to be executed with. The format is: '((*var* value)).
+
+Thread Introspection
+--------------------
+ChanL includes portable support for lisp threads through bordeaux-threads, and adds some sugar
+on top, such as a built-in thread pool. None of the thread functions here should be used in user
+code, since they are meant exclusively for development purposes. Most thread-related matters
+are automatically handled by the thread pool already. In fact, not a single one of these should
+be expected to work properly when you use them, so do so at your own risk.
+
+[function] current-thread
+  Returns the current thread
+
+[function] thread-alive-p thread
+  T if THREAD is still alive
+
+[function] threadp maybe-thread
+  T if maybe-thread is, in fact, a thread.
+
+[function] thread-name thread
+  Returns the name of the thread.
+
+[function] kill thread
+  Kills thread dead.
+
+[function] all-threads
+  Returns a list of all threads currently running in the lisp image.
+
+[function] pooled-threads
+  Returns a list of all threads currently managed by ChanL's thread pool.
+
+[symbol-macro] %thread-pool-soft-limit
+  This is a SETFable place. It may be used to inspect and change the soft limit for how many threads
+  the thread pool keeps around. Note that the total number of threads will exceed this limit if
+  threads continue to be spawned while others are still running. This only refers to the number
+  of threads kept alive for later use.
+  The default value is 1000.
 
 Examples
 --------
-
-Some examples:
 
 create a channel:
 
@@ -54,12 +188,12 @@ wait for any of a number of things to occur:
        (otherwise
         (print "would have blocked~%")))
 
-create a new process continually reading values and printing them:
+create a new thread continually reading values and printing them:
 
      (pexec ()
        (loop (format t "~a~%" (recv *c*))))
 
-create a new process that runs a function:
+create a new thread that runs a function:
 
      (pcall #'my-function)
 
