@@ -13,39 +13,41 @@
 ;;;
 ;;; Channel objects
 ;;;
+
+;;; unbuffered
 (defclass channel ()
   ((value :initform *secret-unbound-value* :accessor channel-value)
-   (buffer :initform nil :accessor channel-buffer)
    (readers :initform 0 :accessor channel-readers)
    (writers :initform 0 :accessor channel-writers)
    (lock :initform (bt:make-recursive-lock) :accessor channel-lock)
    (send-ok :initform (bt:make-condition-variable) :accessor channel-send-ok)
    (recv-ok :initform (bt:make-condition-variable) :accessor channel-recv-ok)))
 
-(defun %make-channel ()
-  (make-instance 'channel))
-
 (defgeneric channelp (channel)
   (:method ((channel channel)) (declare (ignore channel)) t)
   (:method (anything-else) (declare (ignore anything-else)) nil))
 
-(defmethod print-object ((channel channel) stream)
-  (print-unreadable-object (channel stream :type t :identity t)
-    (if (channel-buffered-p channel)
-        (format stream "[~A/~A]"
-                (queue-count (channel-buffer channel))
-                (queue-max-size (channel-buffer channel)))
-        (format stream "[unbuffered]"))))
+;;; buffered
+(defclass buffered-channel (channel)
+  ((buffer :initarg :buffer :accessor channel-buffer)))
 
-(defun channel-buffered-p (channel)
-  (when (channel-buffer channel) t))
+(defgeneric channel-buffered-p (channel)
+  (:method ((channel buffered-channel)) (declare (ignore channel)) t)
+  (:method (anything-else) (declare (ignore anything-else)) nil))
+
+(defmethod print-object ((channel buffered-channel) stream)
+  (print-unreadable-object (channel stream :type t :identity t)
+    (format stream "[~A/~A]"
+            (queue-count (channel-buffer channel))
+            (queue-max-size (channel-buffer channel)))))
 
 (defun make-channel (&optional (buffer-size 0))
   (assert (not (minusp buffer-size)) () "Buffer size cannot be negative.")
-  (let ((channel (%make-channel)))
-    (when (> buffer-size 0)
-      (setf (channel-buffer channel) (make-queue buffer-size)))
-    channel))
+  (cond ((> buffer-size 0)
+         (make-instance 'buffered-channel :buffer (make-queue buffer-size)))
+        ((= buffer-size 0)
+         (make-instance 'channel))
+        (t (error "Hm. It's not supposed to get here."))))
 
 ;;;
 ;;; Messaging
@@ -72,24 +74,17 @@
       (channel-insert-value channel obj) ; wake up a sleeping reader
       channel)))
 
-(defun send-select (channels value &optional (blockp t))
-  (loop do (map nil (fun (when (send _ value nil)
-                           (return _)))
-                channels)
-     unless blockp
-     return nil))
-
-(defun channel-insert-value (channel value)
+(defgeneric channel-insert-value (channel value)
   ;; We have to do some sleight-of hand here when buffered channels are involved.
   ;; otherwise, we really just set the value to the actual value we want to send.
   ;; This'll temporarily clobber the sentinel (recv should restore it once it
   ;; grabs the value).
-  (if (channel-buffered-p channel)
-      (progn
-        (when (queue-full-p (channel-buffer channel))
-          (setf (channel-value channel) (dequeue (channel-buffer channel))))
-        (enqueue value (channel-buffer channel)))
-      (setf (channel-value channel) value)))
+  (:method ((channel channel) value)
+    (setf (channel-value channel) value))
+  (:method ((channel buffered-channel) value)
+    (when (queue-full-p (channel-buffer channel))
+      (setf (channel-value channel) (dequeue (channel-buffer channel))))
+    (enqueue value (channel-buffer channel))))
 
 ;;; Sending
 (defmacro with-read-state ((channel) &body body)
@@ -117,36 +112,31 @@
                   (return-from %recv (values nil nil))))
         (values (channel-grab-value channel) channel)))))
 
-(defun recv-select (channels &optional (blockp t))
-  (loop do (map nil (fun (multiple-value-bind (return-val succeeded) (%recv _ nil)
-                           (when succeeded (return (values return-val _)))))
-                channels)
-     unless blockp
-     return (values nil nil)))
+(defgeneric %recv-blocks-p (channel)
+  (:method ((channel channel))
+    (eq *secret-unbound-value* (channel-value channel)))
+  (:method ((channel buffered-channel))
+    ;; The reason for this kludge is a bit complicated. Basically, we need a special
+    ;; form of recv-blocks-p to use internally that doesn't check the number of writers.
+    ;; If we check the writers here, we end up not releasing the lock and letting SEND
+    ;; do its thing before we keep going forward.
+    (and (queue-empty-p (channel-buffer channel))
+         (call-next-method))))
 
-(defun %recv-blocks-p (channel)
-  ;; The reason for this kludge is a bit complicated. Basically, we need a special
-  ;; form of recv-blocks-p to use internally that doesn't check the number of writers.
-  ;; If we check the writers here, we end up not releasing the lock and letting SEND
-  ;; do its thing before we keep going forward.
-  (if (channel-buffered-p channel)
-      (and (queue-empty-p (channel-buffer channel))
-           (eq *secret-unbound-value* (channel-value channel)))
-      (and (eq *secret-unbound-value* (channel-value channel)))))
-
-(defun channel-grab-value (channel)
-  ;; This one's a doozy. The special case of having a buffered channel means we need
-  ;; to do a bit of juggling. We want the sender to be able to queue something, but
-  ;; if our queue is full, we can't let them do that. The solution is to use the value
-  ;; slot in the struct. Once the dequeue into channel-value is done, we can treat the
-  ;; channel as unbuffered, returning the value we just dequeued, and finally setting
-  ;; the channel-value back to the sentinel. We're done here. --sykopomp
-  (when (and (channel-buffered-p channel)
-             (not (queue-empty-p (channel-buffer channel)))
-             (eq *secret-unbound-value* (channel-value channel)))
-    (setf (channel-value channel) (dequeue (channel-buffer channel))))
-  (prog1 (channel-value channel)
-    (setf (channel-value channel) *secret-unbound-value*)))
+(defgeneric channel-grab-value (channel)
+  (:method ((channel channel))
+    (prog1 (channel-value channel)
+      (setf (channel-value channel) *secret-unbound-value*)))
+  (:method :before ((channel buffered-channel))
+    ;; This one's a doozy. The special case of having a buffered channel means we need
+    ;; to do a bit of juggling. We want the sender to be able to queue something, but
+    ;; if our queue is full, we can't let them do that. The solution is to use the value
+    ;; slot in the struct. Once the dequeue into channel-value is done, we can treat the
+    ;; channel as unbuffered, returning the value we just dequeued, and finally setting
+    ;; the channel-value back to the sentinel. We're done here. --sykopomp
+    (when (and (not (queue-empty-p (channel-buffer channel)))
+               (eq *secret-unbound-value* (channel-value channel)))
+      (setf (channel-value channel) (dequeue (channel-buffer channel))))))
 
 ;;;
 ;;; Interface
@@ -155,7 +145,11 @@
   (:method ((channel channel) &optional (blockp t))
     (%recv channel blockp))
   (:method ((channels sequence) &optional (blockp t))
-    (recv-select channels blockp))
+    (loop do (map nil (fun (multiple-value-bind (return-val succeeded) (%recv _ nil)
+                             (when succeeded (return (values return-val _)))))
+                  channels)
+       unless blockp
+       return (values nil nil)))
   (:documentation "Tries to receive from either a single channel, or a sequence of channels.  If
 BLOCKP is true, RECV will block until it's possible to receive something.  Returns two values: The
 first is the actual value received through the channel.  The second is the channel the value was
@@ -174,7 +168,11 @@ interactive/debugging purposes."))
   (:method ((channel channel) value &optional (blockp t))
     (%send channel value blockp))
   (:method ((channels sequence) value &optional (blockp t))
-    (send-select channels value blockp))
+    (loop do (map nil (fun (when (send _ value nil)
+                             (return _)))
+                  channels)
+       unless blockp
+       return nil))
   (:documentation "Tries to send VALUE into CHAN-OR-CHANS. If a sequence of channels is provided
 instead of a single channel, SEND will send the value into the first channel that doesn't block.  If
 BLOCKP is true, SEND will continue to block until it's able to actually send a value. If BLOCKP is
@@ -182,20 +180,19 @@ NIL, SEND will immediately return NIL instead of blocking, if there's no channel
 input into. When SEND succeeds, it returns the channel the value was sent into."))
 
 (defgeneric send-blocks-p (channel)
+  ;; This is a bit of a logical mess. The points to note are:
+  ;; 1. We must make special accomodations for buffered channels, since
+  ;;    they don't block if there's still space in the buffer.
+  ;; 2. We block unless *both* of these conditions are filled:
+  ;;    a. at least one reader somewhere currently trying to read from the channel.
+  ;;    b. the sentinel value is present (meaning we're in the middle of a send already,
+  ;;       for some reason. Is this even possible?)
   (:method ((channel channel))
-    ;; This is a bit of a logical mess. The points to note are:
-    ;; 1. We must make special accomodations for buffered channels, since
-    ;;    they don't block if there's still space in the buffer.
-    ;; 2. We block unless *both* of these conditions are filled:
-    ;;    a. at least one reader somewhere currently trying to read from the channel.
-    ;;    b. the sentinel value is present (meaning we're in the middle of a send already,
-    ;;       for some reason. Is this even possible?)
-    (and (not (and (plusp (channel-readers channel))
-                   (eq (channel-value channel)
-                       *secret-unbound-value*)))
-         (if (channel-buffered-p channel)
-             (queue-full-p (channel-buffer channel))
-             t)))
+    (not (and (plusp (channel-readers channel))
+              (eq (channel-value channel)
+                  *secret-unbound-value*))))
+  (:method ((channel buffered-channel))
+    (and (call-next-method) (queue-full-p (channel-buffer channel))))
   (:documentation "Returns T if trying to SEND to CHANNEL would block. Note that this is not an
 atomic operation, and should not be relied on in production. It's mostly meant for
 interactive/debugging purposes."))
