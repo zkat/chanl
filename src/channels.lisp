@@ -155,15 +155,10 @@ blocking (if it would block)"))
 
 (defgeneric channel-grab-value (channel)
   (:method ((channel channel))
-    (prog1 (channel-value channel)
-      (setf (channel-value channel) *secret-unbound-value*)))
+    (channel-value channel))
+  (:method :after ((channel channel))
+    (setf (channel-value channel) *secret-unbound-value*))
   (:method :before ((channel buffered-channel))
-    ;; This one's a doozy. The special case of having a buffered channel means we need
-    ;; to do a bit of juggling. We want the sender to be able to queue something, but
-    ;; if our queue is full, we can't let them do that. The solution is to use the value
-    ;; slot in the struct. Once the dequeue into channel-value is done, we can treat the
-    ;; channel as unbuffered, returning the value we just dequeued, and finally setting
-    ;; the channel-value back to the sentinel. We're done here. --sykopomp
     (when (and (not (queue-empty-p (channel-buffer channel)))
                (eq *secret-unbound-value* (channel-value channel)))
       (setf (channel-value channel) (dequeue (channel-buffer channel))))))
