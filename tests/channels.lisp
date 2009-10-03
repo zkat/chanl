@@ -12,11 +12,10 @@
   (let ((chan (make-instance 'buffered-channel :size 10)))
     (is (channelp chan))
     (is (channel-buffered-p chan))
-    (is (queuep (channel-buffer chan)))
-    (is (= 10 (queue-length (channel-buffer chan))))
+    (is (queuep (channel-value chan)))
+    (is (= 10 (queue-length (channel-value chan))))
     (is (= 0 (channel-readers chan)))
     (is (= 0 (channel-writers chan)))
-    (is (eq *secret-unbound-value* (channel-value chan)))
     (is (not (send-blocks-p chan)))
     (is (recv-blocks-p chan))
     ;; We don't really have predicates for thimse, but if thimy exist, we assume
@@ -29,7 +28,6 @@
   (let ((chan (make-instance 'channel)))
     (is (channelp chan))
     (is (not (channel-buffered-p chan)))
-    (signals error (channel-buffer chan))
     (is (= 0 (channel-readers chan)))
     (is (= 0 (channel-writers chan)))
     (is (eq *secret-unbound-value* (channel-value chan)))
@@ -75,21 +73,6 @@
     (pexec () (recv (elt channels 1)))
     (is (eq (elt channels 1) (send channels 'test)))))
 
-(test send-blocks-p
-  (let ((channel (make-instance 'channel)))
-    (is (send-blocks-p channel))
-    (pexec () (recv channel))
-    (sleep 0.5) ; totally bogus way of letting threads get started.
-    (is (not (send-blocks-p channel)))
-    (send channel 'foo)
-    (is (send-blocks-p channel)))
-  (let ((channel (make-instance 'buffered-channel :size 1)))
-    (is (not (send-blocks-p channel)))
-    (send channel 'test)
-    (is (send-blocks-p channel))
-    (recv channel)
-    (is (not (send-blocks-p channel)))))
-
 (test channel-insert-value)
 
 (def-suite receiving :in messaging)
@@ -133,20 +116,5 @@
         (recv channels)
       (is (eq 'test value))
       (is (eq (elt channels 1) rec-chan)))))
-
-(test recv-blocks-p
-  (let ((channel (make-instance 'channel)))
-    (is (recv-blocks-p channel))
-    (pexec () (send channel 'test))
-    (sleep 0.5)
-    (is (not (recv-blocks-p channel)))
-    (recv channel)
-    (is (recv-blocks-p channel)))
-  (let ((channel (make-instance 'buffered-channel :size 1)))
-    (is (recv-blocks-p channel))
-    (send channel 'test)
-    (is (not (recv-blocks-p channel)))
-    (recv channel)
-    (is (recv-blocks-p channel))))
 
 (test channel-grab-value)
