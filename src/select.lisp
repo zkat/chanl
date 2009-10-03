@@ -42,9 +42,8 @@ channels, are still linear in the way they go through the sequence -- the random
 reserved for individual SELECT clauses."
   (with-gensyms (*select-block* clause-vector)
     `(block ,*select-block*
-       (let ((,clause-vector (funcall 'vector
-                                      ,@(mapcar 'wrap-select-clause
-                                                (remove :else clauses :key 'clause-type)))))
+       (let ((,clause-vector (vector ,@(mapcar 'wrap-select-clause
+                                               (remove :else clauses :key 'clause-type)))))
          ,(aif (find :else clauses :key 'clause-type)
                `(loop repeat (length ,clause-vector)
                    for index = (random (length ,clause-vector)) then
@@ -75,7 +74,7 @@ reserved for individual SELECT clauses."
     (:send (let ((op (car clause)))
              `(lambda ()
                 ,(aif (fourth op)
-                      `(when-bind ,it ,@(subseq op 0 3)
+                      `(when-bind ,it (,@(subseq op 0 3) nil)
                          (return-from ,*select-block*
                            (block nil ,@(cdr clause))))
                       `(when (,@(subseq op 0 3) nil)
