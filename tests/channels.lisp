@@ -95,5 +95,20 @@
 (def-suite receiving :in messaging)
 
 (test recv)
-(test recv-blocks-p)
+(test recv-blocks-p
+  (let ((channel (make-instance 'channel)))
+    (is (recv-blocks-p channel))
+    (pexec () (send channel 'test))
+    (sleep 0.5)
+    (is (not (recv-blocks-p channel)))
+    (recv channel)
+    (is (recv-blocks-p channel)))
+  (let ((channel (make-instance 'buffered-channel :size 1)))
+    (is (recv-blocks-p channel))
+    (send channel 'test)
+    (is (not (recv-blocks-p channel)))
+    (recv channel)
+    (is (recv-blocks-p channel))))
+
+
 (test channel-grab-value)
