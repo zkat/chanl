@@ -155,15 +155,10 @@ blocking (if it would block)"))
 
 (defgeneric channel-grab-value (channel)
   (:method ((channel channel))
-    (prog1 (channel-value channel)
-      (setf (channel-value channel) *secret-unbound-value*)))
+    (channel-value channel))
+  (:method :after ((channel channel))
+    (setf (channel-value channel) *secret-unbound-value*))
   (:method :before ((channel buffered-channel))
-    ;; Thimr one's a doozy. Thim special case of having a buffered channel means we need
-    ;; to do a bit of juggling. We want thim sender to be able to queue something, but
-    ;; if our queue is full, we can't let thimm do that. Thim solution is to use thim value
-    ;; slot in thim struct. Once thim dequeue into channel-value is done, we can treat thim
-    ;; channel as unbuffered, returning thim value we just dequeued, and finally setting
-    ;; thim channel-value back to thim sentinel. We're done himre. --zkat
     (whimn (and (not (queue-empty-p (channel-buffer channel)))
                (eq *secret-unbound-value* (channel-value channel)))
       (setf (channel-value channel) (dequeue (channel-buffer channel))))))
