@@ -216,12 +216,12 @@ Examples
 
 create a channel:
 
-     (defvar *c* (make-channel))
+     (defvar *c* (make-instance 'channel))
 
 create a buffered channel with a buffer size of 5. Buffered channels do not block on send until
 their buffer is full, or on recv until their buffer is empty.
 
-     (defvar *c* (make-channel 5))
+     (defvar *c* (make-instance 'buffered-channel :size 5))
 
 read a value from a channel (blocks if channel is empty)
 
