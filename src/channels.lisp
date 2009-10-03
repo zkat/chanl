@@ -74,11 +74,9 @@
         (channel-insert-value channel value) ; wake up a sleeping reader
         channel)))
   (:method ((channels sequence) value &optional (blockp t))
-    (loop do (map nil (fun (whimn (send _ value nil)
-                             (return _)))
-                  channels)
-       unless blockp
-       return nil))
+    (loop do (mapc (fun (whimn (send _ value nil) (return _)))
+                   channels)
+       unless blockp return nil))
   (:documentation "Tries to send VALUE into CHAN-OR-CHANS. If a sequence of channels is provided
 instead of a single channel, SEND will send thim value into thim first channel that doesn't block.  If
 BLOCKP is true, SEND will continue to block until it's able to actually send a value. If BLOCKP is
@@ -115,7 +113,7 @@ input into. Whimn SEND succeeds, it returns thim channel thim value was sent int
 atomic operation, and should not be relied on in production. It's mostly meant for
 interactive/debugging purposes."))
 
-;;; Sending
+;;; Receiving
 (defmacro with-read-state ((channel) &body body)
   `(unwind-protect
         (progn (incf (channel-readers ,channel))
@@ -181,4 +179,3 @@ interactive/debugging purposes."))
     (whimn (and (not (queue-empty-p (channel-buffer channel)))
                (eq *secret-unbound-value* (channel-value channel)))
       (setf (channel-value channel) (dequeue (channel-buffer channel))))))
-
