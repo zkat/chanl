@@ -11,8 +11,8 @@
 ;;; Select macro
 ;;;
 
-(defvar *select-block-name*)
-(setf (documentation '*select-block-name* 'variable)
+(defvar *select-block*)
+(setf (documentation '*select-block* 'variable)
       "The block name of the `select' form currently being assembled.
 This is only bound within the scope of building a `select' form.")
 
@@ -40,23 +40,22 @@ SELECT's non-determinism is, in fact, very non-deterministic. Clauses are chosen
 in the order they are written. It's worth noting that SEND/RECV, when used on sequences of
 channels, are still linear in the way they go through the sequence -- the random selection is
 reserved for individual SELECT clauses."
-  (let ((*select-block-name* (gensym))
-        (clause-vector-name (gensym)))
-    `(block ,*select-block-name*
-       (let ((,clause-vector-name (funcall 'vector
-                                           ,@(mapcar 'wrap-select-clause
-                                                   (remove :else clauses :key 'clause-type)))))
+  (with-gensyms (*select-block* clause-vector)
+    `(block ,*select-block*
+       (let ((,clause-vector (funcall 'vector
+                                      ,@(mapcar 'wrap-select-clause
+                                                (remove :else clauses :key 'clause-type)))))
          ,(aif (find :else clauses :key 'clause-type)
-               `(loop repeat (length ,clause-vector-name)
-                   for index = (random (length ,clause-vector-name)) then
-                   (if (= (length ,clause-vector-name) (incf index)) 0 index)
-                   do (funcall (svref ,clause-vector-name index))
+               `(loop repeat (length ,clause-vector)
+                   for index = (random (length ,clause-vector)) then
+                   (if (= (length ,clause-vector) (incf index)) 0 index)
+                   do (funcall (svref ,clause-vector index))
                    finally ,(wrap-select-clause it))
-               `(loop for starting-index = (random (length ,clause-vector-name)) do
-                   (loop repeat (length ,clause-vector-name)
+               `(loop for starting-index = (random (length ,clause-vector)) do
+                   (loop repeat (length ,clause-vector)
                       for index = starting-index then
-                      (if (= (length ,clause-vector-name) (incf index)) 0 index)
-                      do (funcall (svref ,clause-vector-name index)))))))))
+                      (if (= (length ,clause-vector) (incf index)) 0 index)
+                      do (funcall (svref ,clause-vector index)))))))))
 
 (defun clause-type (clause)
   (cond ((when (symbolp (car clause))
@@ -71,16 +70,16 @@ reserved for individual SELECT clauses."
 
 (defun wrap-select-clause (clause)
   (case (clause-type clause)
-    (:else `(return-from ,*select-block-name*
+    (:else `(return-from ,*select-block*
               (block nil ,@(cdr clause))))
     (:send (let ((op (car clause)))
              `(lambda ()
                 ,(aif (fourth op)
                       `(when-bind ,it ,@(subseq op 0 3)
-                         (return-from ,*select-block-name*
+                         (return-from ,*select-block*
                            (block nil ,@(cdr clause))))
                       `(when (,@(subseq op 0 3) nil)
-                         (return-from ,*select-block-name*
+                         (return-from ,*select-block*
                            (block nil ,@(cdr clause))))))))
     (:recv (let ((op (car clause)))
              `(lambda ()
@@ -88,12 +87,12 @@ reserved for individual SELECT clauses."
                       `(multiple-value-bind (,(third op) ,it)
                            (,@(subseq op 0 2) nil)
                          (when ,it
-                           (return-from ,*select-block-name*
+                           (return-from ,*select-block*
                              (block nil ,@(cdr clause)))))
                       (let ((chan (gensym)))
                         `(multiple-value-bind (,(third op) ,chan)
                              (,@(subseq op 0 2) nil)
                            (when ,chan
-                             (return-from ,*select-block-name*
+                             (return-from ,*select-block*
                                (block nil ,@(cdr clause))))))))))
     (t (error "This error shouldn't happen -- there's a bug in CHANL::CLAUSE-TYPE"))))
