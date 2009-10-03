@@ -138,7 +138,7 @@ blocking (if it would block)"))
   (and (not (plusp (channel-readers channel)))
        (queue-full-p (channel-value channel))))
 
-(defmethod channel-insert-value ((channel buffered-channel value))
+(defmethod channel-insert-value ((channel buffered-channel) value)
   (enqueue value (channel-value channel)))
 
 ;;; Receiving
