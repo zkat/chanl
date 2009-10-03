@@ -32,12 +32,12 @@
                   (loop-finish)))))
 
 (defun sieve (output-channel)
-  (let ((input-channel (make-instance 'buffered-channel :size 50)))
+  (let ((input-channel (make-instance 'channel)))
     (pexec () #+ (or) (:name "Counter") (counter input-channel))
     (pexec () ; (:name "Sieve")
       (labels ((next-prime (input-channel)
                  (let* ((prime (recv input-channel))
-                        (new-input (make-instance 'buffered-channel :size 50)))
+                        (new-input (make-instance 'channel)))
                    (send output-channel prime)
                    (when (numberp prime)
                      (pexec () ; (:name (format nil "Filter ~D" prime))
@@ -47,7 +47,7 @@
     output-channel))
 
 (defun first-n-primes (n)
-  (let ((prime-channel (make-instance 'buffered-channel :size 10)))
+  (let ((prime-channel (make-instance 'channel)))
     (setf *terminate* nil)
     (sieve prime-channel)
     (prog1 (loop repeat n collect (recv prime-channel))
