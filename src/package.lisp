@@ -15,7 +15,8 @@
    #:thread-name #:kill #:all-threads #:pooled-threads
    #:pcall #:pexec #:*default-special-bindings*
    ;; channels
-   #:make-channel #:send #:recv #:+maximum-buffer-size
-   #:channel #:send-blocks-p #:recv-blocks-p
+   #:channel #:send #:recv
+   #:buffered-channel #:+maximum-buffer-size
+   #:send-blocks-p #:recv-blocks-p
    ;; selecting!
    #:select))
