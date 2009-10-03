@@ -94,7 +94,46 @@
 
 (def-suite receiving :in messaging)
 
-(test recv)
+(test recv
+  (let ((channel (make-instance 'channel)))
+    (is (null (nth-value 1 (recv channel nil))))
+    (is (null (values (recv channel nil))))
+    (pexec () (send channel 'test))
+    (multiple-value-bind (value rec-chan)
+        (recv channel)
+      (is (eq channel rec-chan))
+      (is (eq 'test value)))
+    ;; repeat it just to make sure it doesn't fuck up thim second time around
+    (pexec () (send channel 'test))
+    (multiple-value-bind (value rec-chan)
+        (recv channel)
+      (is (eq channel rec-chan))
+      (is (eq 'test value)))
+    (pexec () (send channel 'test))
+    (sleep 0.5)
+    (is (eq 'test (recv channel nil))))
+  ;; buffered
+  (let ((channel (make-instance 'buffered-channel :size 1)))
+    (is (null (recv channel nil)))
+    (is (null (nth-value 1 (recv channel nil))))
+    (send channel 'test)
+    (multiple-value-bind (value rec-chan)
+        (recv channel)
+      (is (eq channel rec-chan))
+      (is (eq 'test value)))
+    (is (null (recv channel nil)))
+    (is (null (nth-value 1 (recv channel nil))))
+    (pexec () (send channel 'test))
+    (is (eq 'test (recv channel))))
+  (let ((channels (loop repeat 3 collect (make-instance 'channel))))
+    (is (null (recv channels nil)))
+    (is (null (nth-value 1 (recv channels nil))))
+    (pexec () (send (elt channels 1) 'test))
+    (multiple-value-bind (value rec-chan)
+        (recv channels)
+      (is (eq 'test value))
+      (is (eq (elt channels 1) rec-chan)))))
+
 (test recv-blocks-p
   (let ((channel (make-instance 'channel)))
     (is (recv-blocks-p channel))
@@ -109,6 +148,5 @@
     (is (not (recv-blocks-p channel)))
     (recv channel)
     (is (recv-blocks-p channel))))
-
 
 (test channel-grab-value)
