@@ -48,22 +48,6 @@
 (def-suite messaging :in chanl)
 (def-suite sending :in messaging)
 
-(test send-blocks-p
-  (let ((channel (make-instance 'channel)))
-    (is (send-blocks-p channel))
-    (pexec () (recv channel))
-    (sleep 0.5) ; totally bogus way of letting threads get started.
-    (is (not (send-blocks-p channel)))
-    (send channel 'foo)
-    (is (send-blocks-p channel)))
-  (let ((channel (make-instance 'buffered-channel :size 1)))
-    (is (not (send-blocks-p channel)))
-    (send channel 'test)
-    (is (send-blocks-p channel))
-    (recv channel)
-    (is (not (send-blocks-p channel)))))
-
-(test channel-insert-value)
 (test send
   ;; unbuffered
   (let ((channel (make-instance 'channel)))
@@ -91,9 +75,25 @@
     (pexec () (recv (elt channels 1)))
     (is (eq (elt channels 1) (send channels 'test)))))
 
+(test send-blocks-p
+  (let ((channel (make-instance 'channel)))
+    (is (send-blocks-p channel))
+    (pexec () (recv channel))
+    (sleep 0.5) ; totally bogus way of letting threads get started.
+    (is (not (send-blocks-p channel)))
+    (send channel 'foo)
+    (is (send-blocks-p channel)))
+  (let ((channel (make-instance 'buffered-channel :size 1)))
+    (is (not (send-blocks-p channel)))
+    (send channel 'test)
+    (is (send-blocks-p channel))
+    (recv channel)
+    (is (not (send-blocks-p channel)))))
+
+(test channel-insert-value)
+
 (def-suite receiving :in messaging)
 
 (test recv)
 (test recv-blocks-p)
-(test %recv-blocks-p)
 (test channel-grab-value)
