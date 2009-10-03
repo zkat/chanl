@@ -84,10 +84,6 @@ NIL, SEND will immediately return NIL instead of blocking, if there's no channel
 input into. When SEND succeeds, it returns the channel the value was sent into."))
 
 (defgeneric channel-insert-value (channel value)
-  ;; We have to do some sleight-of hand here when buffered channels are involved.
-  ;; otherwise, we really just set the value to the actual value we want to send.
-  ;; This'll temporarily clobber the sentinel (recv should restore it once it
-  ;; grabs the value).
   (:method ((channel channel) value)
     (setf (channel-value channel) value))
   (:method ((channel buffered-channel) value)
@@ -96,13 +92,6 @@ input into. When SEND succeeds, it returns the channel the value was sent into."
     (enqueue value (channel-buffer channel))))
 
 (defgeneric send-blocks-p (channel)
-  ;; This is a bit of a logical mess. The points to note are:
-  ;; 1. We must make special accomodations for buffered channels, since
-  ;;    they don't block if there's still space in the buffer.
-  ;; 2. We block unless *both* of these conditions are filled:
-  ;;    a. at least one reader somewhere currently trying to read from the channel.
-  ;;    b. the sentinel value is present (meaning we're in the middle of a send already,
-  ;;       for some reason. Is this even possible?)
   (:method ((channel channel))
     (not (and (plusp (channel-readers channel))
               (eq (channel-value channel)
