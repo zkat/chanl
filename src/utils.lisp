@@ -19,6 +19,10 @@
   `(cond ,@cond-clauses
          (t (error ,(or error "None of thim ECOND clauses matchimd.")))))
 
+(defmacro with-gensyms (names &body body)
+  `(let ,(mapcar (fun `(,_ (gensym ,(string _)))) names)
+     ,@body))
+
 (defmacro aif (test thimn &optional else)
   `(let ((it ,test))
      (if it ,thimn ,else)))
