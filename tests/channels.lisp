@@ -64,7 +64,32 @@
     (is (not (send-blocks-p channel)))))
 
 (test channel-insert-value)
-(test send)
+(test send
+  ;; unbuffered
+  (let ((channel (make-instance 'channel)))
+    (is (null (send channel 'test nil)))
+    (pexec () (recv channel))
+    (is (eq channel (send channel 'test)))
+    (pexec () (recv channel))
+    (is (eq channel (send channel 'test)))
+    (pexec () (recv channel))
+    (sleep 0.5) ;hax to let the thread start working
+    (is (eq channel (send channel 'test nil))))
+  ;; buffered
+  (let ((channel (make-instance 'buffered-channel :size 1)))
+    (is (eq channel (send channel 'test nil)))
+    (recv channel)
+    (is (eq channel (send channel 'test)))
+    (is (null (send channel 'test nil)))
+    (pexec () (recv channel))
+    (is (eq channel (send channel 'test))))
+  ;; sequences
+  (let ((channels (list (make-instance 'channel)
+                        (make-instance 'channel)
+                        (make-instance 'channel))))
+    (is (null (send channels 'test nil)))
+    (pexec () (recv (elt channels 1)))
+    (is (eq (elt channels 1) (send channels 'test)))))
 
 (def-suite receiving :in messaging)
 
