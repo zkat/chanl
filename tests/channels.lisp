@@ -13,7 +13,7 @@
     (is (channelp chan))
     (is (channel-buffered-p chan))
     (is (queuep (channel-buffer chan)))
-    (is (= 10 (queue-max-size (channel-buffer chan))))
+    (is (= 10 (queue-length (channel-buffer chan))))
     (is (= 0 (channel-readers chan)))
     (is (= 0 (channel-writers chan)))
     (is (eq *secret-unbound-value* (channel-value chan)))
