@@ -14,7 +14,7 @@
 ;;; It demonstrates the value of channels as concurrency primitives.
 
 (defstruct (future (:print-object (lambda (f s) (print-unreadable-object (f s :type t :identity t)))))
-  (channel (make-channel 1) :read-only t))
+  (channel (make-instance 'buffered-channel :size 1) :read-only t))
 
 (define-condition execution-error (error)
   ((cause :initarg :cause :reader execution-error-cause)
