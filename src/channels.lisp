@@ -31,13 +31,12 @@
 (defconstant +maximum-buffer-size+ (- array-total-size-limit 2)
   "The exclusive upper bound on the size of a channel's buffer.")
 
-(defclass buffered-channel (channel)
-  ((buffer :accessor channel-buffer)))
+(defclass buffered-channel (channel) ())
 
 (defmethod initialize-instance :after ((channel buffered-channel) &key size)
   (assert (typep size `(integer 1 ,(1- +maximum-buffer-size+))) (size)
           "Buffer size must be a non-negative fixnum..")
-  (setf (channel-buffer channel) (make-queue size)))
+  (setf (channel-value channel) (make-queue size)))
 
 (defgeneric channel-buffered-p (channel)
   (:method ((anything-else t)) nil)
@@ -45,7 +44,7 @@
 
 (defmethod print-object ((channel buffered-channel) stream)
   (print-unreadable-object (channel stream :type t :identity t)
-    (let ((buffer (channel-buffer channel)))
+    (let ((buffer (channel-value channel)))
       (format stream "[~A/~A]" (queue-count buffer) (queue-length buffer)))))
 
 ;;;
@@ -86,10 +85,8 @@ input into. When SEND succeeds, it returns the channel the value was sent into."
 (defgeneric channel-insert-value (channel value)
   (:method ((channel channel) value)
     (setf (channel-value channel) value))
-  (:method :around ((channel buffered-channel) value)
-    (when (queue-full-p (channel-buffer channel))
-      (call-next-method (dequeue (channel-buffer channel))))
-    (enqueue value (channel-buffer channel))))
+  (:method ((channel buffered-channel) value)
+    (enqueue value (channel-value channel))))
 
 (defgeneric send-blocks-p (channel)
   (:method ((channel channel))
@@ -97,7 +94,7 @@ input into. When SEND succeeds, it returns the channel the value was sent into."
               (eq (channel-value channel)
                   *secret-unbound-value*))))
   (:method ((channel buffered-channel))
-    (and (call-next-method) (queue-full-p (channel-buffer channel))))
+    (and (not (plusp (channel-readers channel))) (queue-full-p (channel-value channel))))
   (:documentation "Returns T if trying to SEND to CHANNEL would block. Note that this is not an
 atomic operation, and should not be relied on in production. It's mostly meant for
 interactive/debugging purposes."))
@@ -139,16 +136,12 @@ blocking (if it would block)"))
   (:method ((channel channel))
     (eq *secret-unbound-value* (channel-value channel)))
   (:method ((channel buffered-channel))
-    (and (queue-empty-p (channel-buffer channel))
-         (call-next-method))))
+    (queue-empty-p (channel-value channel))))
 
 (defgeneric channel-grab-value (channel)
   (:method ((channel channel))
-    (channel-value channel))
-  (:method :after ((channel channel))
-    (setf (channel-value channel) *secret-unbound-value*))
-  (:method :before ((channel buffered-channel))
-     ;; TODO - This still needs some work. Users shouldn't really have to touch CHANNEL-VALUE, imo
-    (when (and (not (queue-empty-p (channel-buffer channel)))
-               (eq *secret-unbound-value* (channel-value channel)))
-      (setf (channel-value channel) (dequeue (channel-buffer channel))))))
+    (prog1 (channel-value channel)
+      (setf (channel-value channel) *secret-unbound-value*)))
+  (:method ((channel buffered-channel))
+    (dequeue (channel-value channel))))
+
