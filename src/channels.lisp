@@ -86,9 +86,9 @@ input into. When SEND succeeds, it returns the channel the value was sent into."
 (defgeneric channel-insert-value (channel value)
   (:method ((channel channel) value)
     (setf (channel-value channel) value))
-  (:method ((channel buffered-channel) value)
+  (:method :around ((channel buffered-channel) value)
     (when (queue-full-p (channel-buffer channel))
-      (setf (channel-value channel) (dequeue (channel-buffer channel))))
+      (call-next-method (dequeue (channel-buffer channel))))
     (enqueue value (channel-buffer channel))))
 
 (defgeneric send-blocks-p (channel)
