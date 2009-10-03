@@ -45,9 +45,9 @@
 
 (def-suite messaging :in chanl)
 (def-suite sending :in messaging)
+(in-suite sending)
 
-(test send
-  ;; unbuffered
+(test send-unbuffered
   (let ((channel (make-instance 'channel)))
     (is (null (send channel 'test nil)))
     (pexec () (recv channel))
@@ -56,28 +56,27 @@
     (is (eq channel (send channel 'test)))
     (pexec () (recv channel))
     (sleep 0.5) ;hax to let the thread start working
-    (is (eq channel (send channel 'test nil))))
-  ;; buffered
+    (is (eq channel (send channel 'test nil)))))
+
+(test send-buffered
   (let ((channel (make-instance 'buffered-channel :size 1)))
     (is (eq channel (send channel 'test nil)))
     (recv channel)
     (is (eq channel (send channel 'test)))
     (is (null (send channel 'test nil)))
     (pexec () (recv channel))
-    (is (eq channel (send channel 'test))))
-  ;; sequences
-  (let ((channels (list (make-instance 'channel)
-                        (make-instance 'channel)
-                        (make-instance 'channel))))
+    (is (eq channel (send channel 'test)))))
+
+(test send-sequence
+  (let ((channels (loop repeat 3 collect (make-instance 'channel))))
     (is (null (send channels 'test nil)))
     (pexec () (recv (elt channels 1)))
     (is (eq (elt channels 1) (send channels 'test)))))
 
-(test channel-insert-value)
-
 (def-suite receiving :in messaging)
+(in-suite receiving)
 
-(test recv
+(test recv-unbuffered
   (let ((channel (make-instance 'channel)))
     (is (null (nth-value 1 (recv channel nil))))
     (is (null (values (recv channel nil))))
@@ -94,8 +93,9 @@
       (is (eq 'test value)))
     (pexec () (send channel 'test))
     (sleep 0.5)
-    (is (eq 'test (recv channel nil))))
-  ;; buffered
+    (is (eq 'test (recv channel nil)))))
+
+(test recv-buffered
   (let ((channel (make-instance 'buffered-channel :size 1)))
     (is (null (recv channel nil)))
     (is (null (nth-value 1 (recv channel nil))))
@@ -107,7 +107,9 @@
     (is (null (recv channel nil)))
     (is (null (nth-value 1 (recv channel nil))))
     (pexec () (send channel 'test))
-    (is (eq 'test (recv channel))))
+    (is (eq 'test (recv channel)))))
+
+(test recv-sequence
   (let ((channels (loop repeat 3 collect (make-instance 'channel))))
     (is (null (recv channels nil)))
     (is (null (nth-value 1 (recv channels nil))))
@@ -116,5 +118,3 @@
         (recv channels)
       (is (eq 'test value))
       (is (eq (elt channels 1) rec-chan)))))
-
-(test channel-grab-value)
