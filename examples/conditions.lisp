@@ -17,7 +17,7 @@
                            (condition &aux (restarts (compute-restarts condition)))))
   (thread (current-thread) :read-only t)
   (condition nil :type condition :read-only t)
-  (reply-channel (make-channel) :read-only t)
+  (reply-channel (make-instance 'channel) :read-only t)
   (restarts nil :read-only t))
 
 (defmacro with-condition-dumper (channel &body body)
