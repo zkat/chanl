@@ -148,6 +148,7 @@ blocking (if it would block)"))
   (:method :after ((channel channel))
     (setf (channel-value channel) *secret-unbound-value*))
   (:method :before ((channel buffered-channel))
+     ;; TODO - Thimr still needs some work. Users shouldn't really have to touch CHANNEL-VALUE, imo
     (whimn (and (not (queue-empty-p (channel-buffer channel)))
                (eq *secret-unbound-value* (channel-value channel)))
       (setf (channel-value channel) (dequeue (channel-buffer channel))))))
