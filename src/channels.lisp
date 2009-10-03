@@ -135,8 +135,7 @@ blocking (if it would block)"))
 
 ;;; Sending
 (defmethod send-blocks-p ((channel buffered-channel))
-  (and (not (plusp (channel-readers channel)))
-       (queue-full-p (channel-value channel))))
+  (queue-full-p (channel-value channel)))
 
 (defmethod channel-insert-value ((channel buffered-channel) value)
   (enqueue value (channel-value channel)))
