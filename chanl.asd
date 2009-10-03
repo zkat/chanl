@@ -24,46 +24,21 @@
 
 ;;; ... And a few more!
 
-(asdf:defsystem chanl.examples.base
+(asdf:defsystem chanl.examples
   :name "chanl examples"
   :maintainer "Adlai Chandrasekhar"
   :author "Josh Marchan"
   :description "Examples of how to use chanl"
   :depends-on (:chanl)
-  :components ((:module "examples"
-                        :components ((:file "package")
-                                     (:file "utils" :depends-on ("package"))))))
-
-(asdf:defsystem chanl.examples.conditions
-  :name "ChanL cross-thread conditions example"
-  :depends-on (:chanl.examples.base)
+  :serial t
   :components
   ((:module "examples"
-            :components ((:file "conditions")))))
-
-(asdf:defsystem chanl.examples.sieve
-  :name "ChanL parallel sieve example"
-  :depends-on (:chanl.examples.base)
-  :components
-  ((:module "examples"
-            :components ((:file "sieve")))))
-
-(asdf:defsystem chanl.examples.ltk
-  :name "ChanL LTK example"
-  :depends-on (:ltk :chanl.examples.base)
-  :components
-  ((:module "examples"
-            :components ((:file "tk")))))
-
-(asdf:defsystem chanl.examples.futures
-  :depends-on (:chanl.examples.base)
-  :components
-  ((:module "examples"
-            :components ((:file "futures")))))
-
-(asdf:defsystem chanl.examples
-  :depends-on (:chanl.examples.ltk :chanl.examples.sieve :chanl.examples.conditions 
-               :chanl.examples.futures))
+            :serial t
+            :components ((:file "package")
+                         (:file "utils")
+                         (:file "conditions")
+                         (:file "sieve")
+                         (:file "futures")))))
 
 (asdf:defsystem chanl.tests
   :name "chanl tests"
