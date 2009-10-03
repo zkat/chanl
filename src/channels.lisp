@@ -25,6 +25,12 @@
   (:method ((anything-else t)) nil)
   (:method ((channel channel)) t))
 
+(defun channel-being-read-p (channel)
+  (plusp (channel-readers channel)))
+
+(defun channel-being-written-p (channel)
+  (plusp (channel-writers channel)))
+
 ;;; Sending
 (defmacro with-write-state ((channel) &body body)
   `(unwind-protect
@@ -62,7 +68,7 @@ input into. When SEND succeeds, it returns the channel the value was sent into."
 
 (defgeneric send-blocks-p (channel)
   (:method ((channel channel))
-    (not (and (plusp (channel-readers channel))
+    (not (and (channel-being-read-p channel)
               (eq (channel-value channel)
                   *secret-unbound-value*))))
   (:documentation "Returns T if trying to SEND to CHANNEL would block. Note that this is not an
@@ -85,7 +91,7 @@ interactive/debugging purposes."))
         (with-read-state (channel)
           (bt:condition-notify send-ok)
           (loop while (recv-blocks-p channel)
-             do (if (or blockp (plusp (channel-writers channel)))
+             do (if (or blockp (channel-being-written-p channel))
                     (bt:condition-wait (channel-recv-ok channel) lock)
                     (return-from recv (values nil nil))))
           (values (channel-grab-value channel) channel)))))
