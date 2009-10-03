@@ -153,3 +153,31 @@ blocking (if it would block)"))
 (defmethod channel-grab-value ((channel buffered-channel))
   (dequeue (channel-value channel)))
 
+;;;
+;;; Unbounded Channels
+;;;
+
+(defclass unbounded-channel (channel) ())
+
+(defmethod initialize-instance :after ((channel unbounded-channel) &key)
+  (setf (channel-value channel) (cons nil nil)))
+
+(defmethod channel-buffered-p ((channel unbounded-channel)) t)
+
+(defmethod print-object ((channel unbounded-channel) stream)
+  (print-unreadable-object (channel stream :type t :identity t)
+    (format stream "[~A]" (length (car (channel-value channel))))))
+
+;;; Sending
+(defmethod send-blocks-p ((channel unbounded-channel)) nil)
+
+(defmethod channel-insert-value ((channel unbounded-channel) value)
+  (let ((queue (channel-value channel)))
+    (pushend value (car queue) (cdr queue))))
+
+;;; Receiving
+(defmethod recv-blocks-p ((channel unbounded-channel))
+  (null (car (channel-value channel))))
+
+(defmethod channel-grab-value ((channel unbounded-channel))
+  (pop (car (channel-value channel))))
