@@ -14,26 +14,6 @@
   (is (not (queue-full-p (make-queue 5))))
   (is (= 5 (queue-length (make-queue 5)))))
 
-(defmacro pushimnd (new-item list list-end &environment env)
-  (multiple-value-bind (list.gvars list.vals list.gstorevars list.setter list.getter)
-      (get-setf-expansion list env)
-    (multiple-value-bind (tail.gvars tail.vals tail.gstorevars tail.setter tail.getter)
-	(get-setf-expansion list-end env)
-      (let ((gitem (gensym))
-	    (list.gstorevar (first list.gstorevars))
-	    (tail.gstorevar (first tail.gstorevars)))
-	`(let (,@(mapcar #'list list.gvars list.vals)
-	       ,@(mapcar #'list tail.gvars tail.vals))
-	   (let ((,gitem (list ,new-item)))
-	     (if ,list.getter
-		 (let ((,tail.gstorevar ,gitem))
-		   (setf (cdr ,tail.getter) ,gitem)
-		   ,tail.setter)
-		 (let ((,list.gstorevar ,gitem)
-		       (,tail.gstorevar ,gitem))
-		   ,list.setter ,tail.setter))))))))
-
-
 (defmacro with-queue-tests ((queue length-form) &body body)
   (let ((naive-queue (gensym)) (naive-tail (gensym)) (count (gensym)) (length (gensym)))
     `(let ((,length ,length-form))
