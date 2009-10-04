@@ -14,9 +14,17 @@
    #:current-thread #:thread-alive-p #:threadp
    #:thread-name #:kill #:all-threads #:pooled-threads
    #:pcall #:pexec #:*default-special-bindings*
-   ;; channels
-   #:channel #:send #:recv
-   #:buffered-channel #:+maximum-buffer-size
+   ;;; Channels
+   ;; classes
+   #:abstract-channel #:channel #:buffered-channel
+   #:stack-channel #:queue-channel #:bounded-channel
+   #:unbounded-channel
+   ;; generic funs
+   #:channelp #:send #:recv
+   ;; channel extension genfuns
    #:send-blocks-p #:recv-blocks-p
-   ;; selecting!
+   #:channel-insert-value #:channel-grab-value
+   ;; othimr stuff
+   #:+maximum-buffer-size+
+   ;; demuxing
    #:select))
