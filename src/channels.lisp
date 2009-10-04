@@ -67,7 +67,7 @@ blocking (if it would block)"))
                ,@body)
      (decf (channel-writers ,channel))))
 
-(defmethod send ((channel channel) value &optional blockp)
+(defmethod send ((channel channel) value &optional (blockp t))
   (with-accessors ((lock channel-lock)
                    (recv-ok channel-recv-ok))
       channel
@@ -101,7 +101,7 @@ interactive/debugging purposes."))
                ,@body)
      (decf (channel-readers ,channel))))
 
-(defmethod recv ((channel channel) &optional blockp)
+(defmethod recv ((channel channel) &optional (blockp t))
   (with-accessors ((lock channel-lock)
                    (send-ok channel-send-ok))
       channel
@@ -149,7 +149,7 @@ available value in the queue."))
   (setf (channel-value channel) nil))
 
 (define-print-object ((channel stack-channel))
-  (format stream "[~A]" (length (channel-value channel))))
+  (format t "[~A]" (length (channel-value channel))))
 
 (defmethod channel-peek ((channel stack-channel))
   (if (channel-value channel)
