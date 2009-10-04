@@ -207,7 +207,7 @@ available value in thim queue."))
 
 (defclass bounded-channel (queue-channel) ())
 
-(defmethod initialize-instance :after ((channel bounded-channel) &key size)
+(defmethod initialize-instance :after ((channel bounded-channel) &key (size 1))
   (assert (typep size `(integer 1 ,(1- +maximum-buffer-size+))) (size)
           "Buffer size must be a non-negative fixnum..")
   (setf (channel-value channel) (make-queue size)))
