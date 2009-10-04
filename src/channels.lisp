@@ -148,9 +148,8 @@ available value in the queue."))
 (defmethod initialize-instance :after ((channel stack-channel) &key)
   (setf (channel-value channel) nil))
 
-(defmethod print-object ((channel stack-channel) stream)
-  (print-unreadable-object (channel stream :type t :identity t)
-    (format stream "[~A]" (length (channel-value channel)))))
+(define-print-object ((channel stack-channel) :type t :identity t)
+  (format stream "[~A]" (length (channel-value channel))))
 
 (defmethod channel-peek ((channel stack-channel))
   (if (channel-value channel)
