@@ -11,11 +11,6 @@
 ;;; Select macro
 ;;;
 
-(defvar *select-block*)
-(setf (documentation '*select-block* 'variable)
-      "The block name of the `select' form currently being assembled.
-This is only bound within the scope of building a `select' form.")
-
 (defmacro select (&body clauses)
   "Non-deterministically select a non-blocking clause to execute.
 
@@ -41,21 +36,36 @@ in the order they are written. It's worth noting that SEND/RECV, when used on se
 channels, are still linear in the way they go through the sequence -- the random selection is
 reserved for individual SELECT clauses."
   (unless (null clauses)
-    (with-gensyms (*select-block* clause-vector)
-      `(block ,*select-block*
-         (let ((,clause-vector (vector ,@(mapcar 'wrap-select-clause
-                                                 (remove :else clauses :key 'clause-type)))))
-           ,(aif (find :else clauses :key 'clause-type)
-                 `(loop repeat (length ,clause-vector)
-                     for index = (random (length ,clause-vector)) then
-                     (if (= (length ,clause-vector) (incf index)) 0 index)
-                     do (funcall (svref ,clause-vector index))
-                     finally ,(wrap-select-clause it))
-                 `(loop for starting-index = (random (length ,clause-vector)) do
-                       (loop repeat (length ,clause-vector)
-                          for index = starting-index then
-                          (if (= (length ,clause-vector) (incf index)) 0 index)
-                          do (funcall (svref ,clause-vector index))))))))))
+    (let* ((main-clauses (remove :else clauses :key 'clause-type))
+           (else-clause (find :else clauses :key 'clause-type))
+           (num-clauses (length main-clauses))
+           (clause-tags (loop for i from 1 to num-clauses collect
+                             (make-symbol (format nil "~:@(~:R-clause~)" i)))))
+      (with-gensyms (repeat-counter index pick-clause inner-next outer-next)
+        `(block nil
+           ,(if (null main-clauses)
+                (wrap-select-clause else-clause)
+                `(let ((,repeat-counter ,num-clauses)
+                       (,index (random ,num-clauses)))
+                   (tagbody
+                    ,pick-clause
+                      (when (zerop ,repeat-counter)
+                        (go ,outer-next))
+                      (ecase ,index
+                        ,@(loop for n below num-clauses and tag in clause-tags
+                             collect `(,n (go ,tag))))
+                      ,@(loop for clause in main-clauses and tag in clause-tags
+                           nconc `(,tag ,(wrap-select-clause clause) (go ,inner-next)))
+                    ,inner-next
+                      (incf ,index) (decf ,repeat-counter)
+                      (when (= ,num-clauses ,index)
+                        (setf ,index 0))
+                      (go ,pick-clause)
+                    ,outer-next
+                      ,(if else-clause
+                           (wrap-select-clause else-clause)
+                           `(setf ,repeat-counter ,num-clauses
+                                  ,index (random ,num-clauses)))))))))))
 
 (defun clause-type (clause)
   (cond ((when (symbolp (car clause))
@@ -70,29 +80,22 @@ reserved for individual SELECT clauses."
 
 (defun wrap-select-clause (clause)
   (case (clause-type clause)
-    (:else `(return-from ,*select-block*
-              (block nil ,@(cdr clause))))
+    (:else `(return (progn ,@(cdr clause))))
     (:send (let ((op (car clause)))
-             `(lambda ()
-                ,(aif (fourth op)
-                      `(when-bind ,it (,@(subseq op 0 3) nil)
-                         (return-from ,*select-block*
-                           (block nil ,@(cdr clause))))
-                      `(when (,@(subseq op 0 3) nil)
-                         (return-from ,*select-block*
-                           (block nil ,@(cdr clause))))))))
+             (aif (fourth op)
+                  `(when-bind ,it (,@(subseq op 0 3) nil)
+                     (return (progn ,@(cdr clause))))
+                  `(when (,@(subseq op 0 3) nil)
+                     (return (progn ,@(cdr clause)))))))
     (:recv (let ((op (car clause)))
-             `(lambda ()
-                ,(aif (fourth op)
-                      `(multiple-value-bind (,(third op) ,it)
-                           (,@(subseq op 0 2) nil)
-                         (when ,it
-                           (return-from ,*select-block*
-                             (block nil ,@(cdr clause)))))
-                      (let ((chan (gensym)))
-                        `(multiple-value-bind (,(third op) ,chan)
-                             (,@(subseq op 0 2) nil)
-                           (when ,chan
-                             (return-from ,*select-block*
-                               (block nil ,@(cdr clause))))))))))
+             (aif (fourth op)
+                  `(multiple-value-bind (,(third op) ,it)
+                       (,@(subseq op 0 2) nil)
+                     (when ,it
+                       (return (progn ,@(cdr clause)))))
+                  (let ((chan (gensym)))
+                    `(multiple-value-bind (,(third op) ,chan)
+                         (,@(subseq op 0 2) nil)
+                       (when ,chan
+                         (return (progn ,@(cdr clause)))))))))
     (t (error "This error shouldn't happen -- there's a bug in CHANL::CLAUSE-TYPE"))))
