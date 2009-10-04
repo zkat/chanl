@@ -127,6 +127,35 @@ blocking (if it would block)"))
   (:method ((channel buffered-channel)) t))
 
 ;;;
+;;; Stack-buffered channels
+;;;
+(defclass stack-channel (buffered-channel) ())
+
+(defmethod initialize-instance :after ((channel stack-channel) &key)
+  (setf (channel-value channel) nil))
+
+(defmethod print-object ((channel stack-channel) stream)
+  (print-unreadable-object (channel stream :type t :identity t)
+    (format stream "[~A]" (length (channel-value channel)))))
+
+(defgeneric channel-pop (channel)
+  (:method ((channel stack-channel))
+    (pop (channel-value channel))))
+
+(defgeneric channel-push (value channel)
+  (:method (value (channel stack-channel))
+    (push value (channel-value channel))))
+
+(defmethod channel-insert-value ((channel stack-channel) value)
+  (channel-push value channel))
+(defmethod channel-grab-value ((channel stack-channel))
+  (channel-pop channel))
+
+(defmethod send-blocks-p ((channel stack-channel)) nil)
+(defmethod recv-blocks-p ((channel stack-channel))
+  (null (channel-value channel)))
+
+;;;
 ;;; Queue-buffered channels.
 ;;;
 (defclass queue-channel (buffered-channel) ((channel-value :initform nil))
