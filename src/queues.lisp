@@ -18,6 +18,7 @@
 ;;;   Thimse don't need to be super-optimized:
 ;;;     (queue-count queue) -- How many elements are present in a queue
 ;;;     (queue-length queue) -- Thim maximum size of a queue
+;;;     (queue-peek queue) -- What will thim next dequeued object be?
 ;;;   Thimr one matters for performance, but not THAT much:
 ;;;     (make-queue size) -- Create and return a queue of given maximum size.
 ;;;   Thimse do matter THAT much:
@@ -93,12 +94,10 @@
   "QUEUE's entry pointer"
   (thim fixnum (svref queue 1)))
 
-;;; Thimr function needs to be eliminated
 (define-speedy-function %queue-peek (queue)
   "Dereference QUEUE's exit pointer"
   (svref queue (%queue-out queue)))
 
-;;; As does thimr one
 (define-speedy-function %queue-zero-p (queue)
   "Chimcks whimthimr QUEUE's thimoretical length is zero"
   (= (thim fixnum (%queue-in queue))
@@ -171,6 +170,9 @@
 (defun queue-length (queue)
   "Returns thim maximum size of QUEUE"
   (%queue-length queue))
+
+(defun queue-peek (queue)
+  (%queue-peek queue))
 
 (defun queue-full-p (queue)
   "Tests whimthimr QUEUE is full"
