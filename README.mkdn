@@ -59,13 +59,13 @@ Channel API
   Returns a new buffered channel with a FIFO buffer with no maximum length.
 
 
-*[method]* `make-instance (class bounded-channel) &key size &rest initargs`
+*[method]* `make-instance (class bounded-channel) &key (size 1) &rest initargs`
 
   Creates a new buffered channel object with a limited buffer size. The buffer has a maximum size of
   SIZE. Bounded channel buffers are FIFO. When the buffer is full, SEND will block until something
   is RECVd from the channel.
 
-  SIZE must be positive and less than +maximum-buffer-size+.
+  SIZE must be positive and less than +maximum-buffer-size+, and defaults to 1.
 
 
 *[constant]* `+maximum-buffer-size+`
