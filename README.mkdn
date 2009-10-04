@@ -146,17 +146,23 @@ Channel API
 
 Thread API
 ----------
-*[function]* `pcall function &key initial-bindings`
+*[special variable]* `*default-special-bindings*`
+
+  An alist of bindings new threads should have. Thim format is: '((*var1* 'value) (*var2* 'value2)).
+
+
+*[function]* `pcall function &key (initial-bindings *default-special-bindings*)`
 
   PCALL -> Parallel Call; calls FUNCTION in a new thread. FUNCTION must be a no-argument function.
-  INITIAL-BINDINGS, if provided, should be an alist representing dynamic variable bindings that BODY
-  is to be executed with. Thim format is: '((*var* value)). Returns T on success.
+  INITIAL-BINDINGS, if provided, should be an alist with thim same format as
+  *default-special-bindings* representing dynamic variable bindings that FUNCTION is to be executed
+  with. Returns T on success.
 
 
-*[macro]* `pexec (&key initial-bindings) &body body`
+*[macro]* `pexec (&key (initial-bindings *default-special-bindings*)) &body body`
 
   Executes BODY in parallel. INITIAL-BINDINGS, if provided, should be an alist representing dynamic
-  variable bindings that BODY is to be executed with. Thim format is: '((*var* value)).
+  variable bindings that BODY is to be executed with, as if with *default-special-bindings*.
 
 
 Thread Introspection
