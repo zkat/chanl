@@ -158,7 +158,7 @@ blocking (if it would block)"))
 ;;;
 ;;; Queue-buffered channels.
 ;;;
-(defclass queue-channel (buffered-channel) ((channel-value :initform nil))
+(defclass queue-channel (buffered-channel) ()
   (:documentation "These channels buffer objects in some sort of queue."))
 
 (defgeneric channel-enqueue (value channel)
