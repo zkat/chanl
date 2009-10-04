@@ -107,7 +107,6 @@ first is the actual value received through the channel.  The second is the chann
 received from. When BLOCKP is NIL, RECV will immediately return (values NIL NIL) instead of
 blocking (if it would block)"))
 
-;;; unbuffered
 (defgeneric recv-blocks-p (channel)
   (:method ((channel channel))
     (eq *secret-unbound-value* (channel-value channel))))
@@ -120,58 +119,90 @@ blocking (if it would block)"))
 ;;;
 ;;; Buffered channels
 ;;;
-(defconstant +maximum-buffer-size+ (- array-total-size-limit 2)
-  "The exclusive upper bound on the size of a channel's buffer.")
-
-(defclass buffered-channel (channel) ())
-
-(defmethod initialize-instance :after ((channel buffered-channel) &key size)
-  (assert (typep size `(integer 1 ,(1- +maximum-buffer-size+))) (size)
-          "Buffer size must be a non-negative fixnum..")
-  (setf (channel-value channel) (make-queue size)))
+(defclass buffered-channel (channel) ()
+  (:documentation "Abstract class for channels using various buffering styles."))
 
 (defgeneric channel-buffered-p (channel)
   (:method ((anything-else t)) nil)
   (:method ((channel buffered-channel)) t))
 
-(defmethod print-object ((channel buffered-channel) stream)
+;;;
+;;; Queue-buffered channels.
+;;;
+(defclass queue-channel (buffered-channel) ((channel-value :initform nil))
+  (:documentation "These channels buffer objects in some sort of queue."))
+
+(defgeneric channel-enqueue (value channel)
+  (:documentation "Enqueue VALUE in CHANNEL's buffer queue."))
+(defgeneric channel-dequeue (channel)
+  (:documentation "Dequeue a value from CHANNEL's buffer queue."))
+(defgeneric channel-peek (channel)
+  (:documentation
+   "Peek at the next value CHANNEL would dequeue. Note that this cannot
+be used atomically. Returns two values: The first is the value of interest
+or NIL, the second is a generalized boolean that is NIL when there is no
+available value in the queue."))
+
+(defmethod channel-insert-value ((channel queue-channel) value)
+  (channel-enqueue value channel))
+
+(defmethod channel-grab-value ((channel queue-channel))
+  (channel-dequeue channel))
+
+;;;
+;;; Bounded Buffered Channels
+;;;
+(defconstant +maximum-buffer-size+ (- array-total-size-limit 2)
+  "The exclusive upper bound on the size of a channel's buffer.")
+
+(defclass bounded-channel (queue-channel) ())
+
+(defmethod initialize-instance :after ((channel bounded-channel) &key size)
+  (assert (typep size `(integer 1 ,(1- +maximum-buffer-size+))) (size)
+          "Buffer size must be a non-negative fixnum..")
+  (setf (channel-value channel) (make-queue size)))
+
+(defmethod print-object ((channel bounded-channel) stream)
   (print-unreadable-object (channel stream :type t :identity t)
     (let ((buffer (channel-value channel)))
       (format stream "[~A/~A]" (queue-count buffer) (queue-length buffer)))))
 
+(defmethod channel-peek ((channel bounded-channel))
+  (queue-peek (channel-value channel)))
+
 ;;; Sending
-(defmethod send-blocks-p ((channel buffered-channel))
+(defmethod send-blocks-p ((channel bounded-channel))
   (queue-full-p (channel-value channel)))
 
-(defmethod channel-insert-value ((channel buffered-channel) value)
+(defmethod channel-enqueue (value (channel bounded-channel))
   (enqueue value (channel-value channel)))
 
 ;;; Receiving
-(defmethod recv-blocks-p ((channel buffered-channel))
+(defmethod recv-blocks-p ((channel bounded-channel))
   (queue-empty-p (channel-value channel)))
 
-(defmethod channel-grab-value ((channel buffered-channel))
+(defmethod channel-dequeue ((channel bounded-channel))
   (dequeue (channel-value channel)))
 
 ;;;
 ;;; Unbounded Channels
 ;;;
-
-(defclass unbounded-channel (channel) ())
+(defclass unbounded-channel (queue-channel) ())
 
 (defmethod initialize-instance :after ((channel unbounded-channel) &key)
   (setf (channel-value channel) (cons nil nil)))
-
-(defmethod channel-buffered-p ((channel unbounded-channel)) t)
 
 (defmethod print-object ((channel unbounded-channel) stream)
   (print-unreadable-object (channel stream :type t :identity t)
     (format stream "[~A]" (length (car (channel-value channel))))))
 
+(defmethod channel-peek ((channel unbounded-channel))
+  (car (channel-value channel)))
+
 ;;; Sending
 (defmethod send-blocks-p ((channel unbounded-channel)) nil)
 
-(defmethod channel-insert-value ((channel unbounded-channel) value)
+(defmethod channel-enqueue (value (channel unbounded-channel))
   (let ((queue (channel-value channel)))
     (pushend value (car queue) (cdr queue))))
 
@@ -179,5 +210,5 @@ blocking (if it would block)"))
 (defmethod recv-blocks-p ((channel unbounded-channel))
   (null (car (channel-value channel))))
 
-(defmethod channel-grab-value ((channel unbounded-channel))
+(defmethod channel-dequeue ((channel unbounded-channel))
   (pop (car (channel-value channel))))
