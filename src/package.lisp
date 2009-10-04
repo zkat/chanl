@@ -14,6 +14,7 @@
    #:current-thread #:thread-alive-p #:threadp
    #:thread-name #:kill #:all-threads #:pooled-threads
    #:pcall #:pexec #:*default-special-bindings*
+   #:%thread-pool-soft-limit
    ;;; Channels
    ;; classes
    #:abstract-channel #:channel #:buffered-channel
