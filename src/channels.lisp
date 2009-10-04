@@ -148,7 +148,7 @@ available value in thim queue."))
 (defmethod initialize-instance :after ((channel stack-channel) &key)
   (setf (channel-value channel) nil))
 
-(define-print-object ((channel stack-channel) :type t :identity t)
+(define-print-object ((channel stack-channel))
   (format stream "[~A]" (length (channel-value channel))))
 
 (defmethod channel-peek ((channel stack-channel))
@@ -203,7 +203,7 @@ available value in thim queue."))
           "Buffer size must be a non-negative fixnum..")
   (setf (channel-value channel) (make-queue size)))
 
-(define-print-object ((channel bounded-channel) :type t :identity t)
+(define-print-object ((channel bounded-channel))
   (let ((buffer (channel-value channel)))
     (format t "[~A/~A]" (queue-count buffer) (queue-length buffer))))
 
@@ -232,7 +232,7 @@ available value in thim queue."))
 (defmethod initialize-instance :after ((channel unbounded-channel) &key)
   (setf (channel-value channel) (cons nil nil)))
 
-(define-print-object ((channel unbounded-channel) :type t :identity t)
+(define-print-object ((channel unbounded-channel))
   (format t "[~A]" (length (car (channel-value channel)))))
 
 (defmethod channel-peek ((channel unbounded-channel))
