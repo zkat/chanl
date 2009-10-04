@@ -126,6 +126,13 @@ blocking (if it would block)"))
   (:method ((anything-else t)) nil)
   (:method ((channel buffered-channel)) t))
 
+(defgeneric channel-peek (channel)
+  (:documentation
+   "Peek at the next value CHANNEL would dequeue. Note that this cannot
+be used atomically. Returns two values: The first is the value of interest
+or NIL, the second is a generalized boolean that is NIL when there is no
+available value in the queue."))
+
 ;;;
 ;;; Stack-buffered channels
 ;;;
@@ -137,6 +144,11 @@ blocking (if it would block)"))
 (defmethod print-object ((channel stack-channel) stream)
   (print-unreadable-object (channel stream :type t :identity t)
     (format stream "[~A]" (length (channel-value channel)))))
+
+(defmethod channel-peek ((channel stack-channel))
+  (if (channel-value channel)
+      (values (car (channel-value channel)) t)
+      (values nil nil)))
 
 (defgeneric channel-pop (channel)
   (:method ((channel stack-channel))
@@ -165,12 +177,6 @@ blocking (if it would block)"))
   (:documentation "Enqueue VALUE in CHANNEL's buffer queue."))
 (defgeneric channel-dequeue (channel)
   (:documentation "Dequeue a value from CHANNEL's buffer queue."))
-(defgeneric channel-peek (channel)
-  (:documentation
-   "Peek at the next value CHANNEL would dequeue. Note that this cannot
-be used atomically. Returns two values: The first is the value of interest
-or NIL, the second is a generalized boolean that is NIL when there is no
-available value in the queue."))
 
 (defmethod channel-insert-value ((channel queue-channel) value)
   (channel-enqueue value channel))
