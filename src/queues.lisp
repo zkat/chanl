@@ -18,6 +18,7 @@
 ;;;   These don't need to be super-optimized:
 ;;;     (queue-count queue) -- How many elements are present in a queue
 ;;;     (queue-length queue) -- The maximum size of a queue
+;;;     (queue-peek queue) -- What will the next dequeued object be?
 ;;;   This one matters for performance, but not THAT much:
 ;;;     (make-queue size) -- Create and return a queue of given maximum size.
 ;;;   These do matter THAT much:
@@ -93,12 +94,10 @@
   "QUEUE's entry pointer"
   (the fixnum (svref queue 1)))
 
-;;; This function needs to be eliminated
 (define-speedy-function %queue-peek (queue)
   "Dereference QUEUE's exit pointer"
   (svref queue (%queue-out queue)))
 
-;;; As does this one
 (define-speedy-function %queue-zero-p (queue)
   "Checks whether QUEUE's theoretical length is zero"
   (= (the fixnum (%queue-in queue))
@@ -171,6 +170,9 @@
 (defun queue-length (queue)
   "Returns the maximum size of QUEUE"
   (%queue-length queue))
+
+(defun queue-peek (queue)
+  (%queue-peek queue))
 
 (defun queue-full-p (queue)
   "Tests whether QUEUE is full"
