@@ -233,7 +233,7 @@ Writing your own channels
 
 Currently, ChanL provides a very early API for writing your own channels easily.
 
-*[abstract class]* `abstract-channel`
+*[class]* `abstract-channel`
 
   This class is the ancestral superclass of all channels. CHANNELP returns T for any instances of
   this class or its subclasses.
@@ -253,29 +253,35 @@ Subclasses of the CHANNEL class are able to extend behavior in a fairly flexible
 writing methods for the following 4 generic functions:
 
 *[generic function]* `send-blocks-p channel`
-  If this function returns T, calling SEND on the channel will block.
+
+  This function returns, as a generalized boolean, whether SEND should block on this channel.
 
 
 *[generic function]* `recv-blocks-p channel`
+
   Like send-blocks-p, but for RECV.
 
 
 Please note that the consequences of calling send-blocks-p and recv-blocks-p in user code are
-*undefined*.
+*undefined* -- these functions are called from specific points within the carefully instrumented
+algorithms of the SEND and RECV methods specialized on the CHANNEL class.
 
 
-*[generic function]* `channel-insert-value` Methods on this function should define the behavior to
-  be taken by ChanL whenever channel operations reach the point of actually inserting a value into
-  the channel. This function's return values are ignored.
+*[generic function]* `channel-insert-value channel value`
 
-*[generic function]* `channel-grab-value` Methods on this function should define the behavior to be
-  taken by ChanL whenever a channel is to return a requested value. Note that this does not need to
-  fulfill ChanL's API of returning two values. It must, however, return at least one value. The
-  primary value will be returned by RECV along with the channel itself.
+  Methods on this function define what actions are taken to insert a value into a channel. Methods
+  should be specialized only on the first argument. This function's return values are ignored.
+
+
+*[generic function]* `channel-grab-value channel`
+
+  Methods on this function define how to retrieve a value from a channel. This function must return
+  at least one value, the object retrieved from the channel, which will then be returned by RECV.
 
 
 Additionally, ChanL uses and exports a number of abstract and concrete classes to implement its
 buffered channels:
+
 
 *[abstract class]* `buffered-channel`
 
