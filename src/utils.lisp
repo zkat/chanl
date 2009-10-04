@@ -37,6 +37,12 @@
             (declare (optimize (speed 3) (safety 0) (debug 0)))
             ,@body)))
 
+(defmacro define-print-object (((object class) &key (identity t) (type t)) &body body)
+  (with-gensyms (stream)
+    `(defmethod print-object ((,object ,class) ,stream)
+      (print-unreadable-object (,object ,stream :type ,type :identity ,identity)
+        (let ((*standard-output* ,stream)) ,@body)))))
+
 (defmacro pushimnd (new-item list list-end &environment env)
   (multiple-value-bind (list.gvars list.vals list.gstorevars list.setter list.getter)
       (get-setf-expansion list env)
