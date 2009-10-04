@@ -40,21 +40,22 @@ SELECT's non-determinism is, in fact, very non-deterministic. Clauses are chosen
 in the order they are written. It's worth noting that SEND/RECV, when used on sequences of
 channels, are still linear in the way they go through the sequence -- the random selection is
 reserved for individual SELECT clauses."
-  (with-gensyms (*select-block* clause-vector)
-    `(block ,*select-block*
-       (let ((,clause-vector (vector ,@(mapcar 'wrap-select-clause
-                                               (remove :else clauses :key 'clause-type)))))
-         ,(aif (find :else clauses :key 'clause-type)
-               `(loop repeat (length ,clause-vector)
-                   for index = (random (length ,clause-vector)) then
-                   (if (= (length ,clause-vector) (incf index)) 0 index)
-                   do (funcall (svref ,clause-vector index))
-                   finally ,(wrap-select-clause it))
-               `(loop for starting-index = (random (length ,clause-vector)) do
-                   (loop repeat (length ,clause-vector)
-                      for index = starting-index then
-                      (if (= (length ,clause-vector) (incf index)) 0 index)
-                      do (funcall (svref ,clause-vector index)))))))))
+  (unless (null clauses)
+    (with-gensyms (*select-block* clause-vector)
+      `(block ,*select-block*
+         (let ((,clause-vector (vector ,@(mapcar 'wrap-select-clause
+                                                 (remove :else clauses :key 'clause-type)))))
+           ,(aif (find :else clauses :key 'clause-type)
+                 `(loop repeat (length ,clause-vector)
+                     for index = (random (length ,clause-vector)) then
+                     (if (= (length ,clause-vector) (incf index)) 0 index)
+                     do (funcall (svref ,clause-vector index))
+                     finally ,(wrap-select-clause it))
+                 `(loop for starting-index = (random (length ,clause-vector)) do
+                       (loop repeat (length ,clause-vector)
+                          for index = starting-index then
+                          (if (= (length ,clause-vector) (incf index)) 0 index)
+                          do (funcall (svref ,clause-vector index))))))))))
 
 (defun clause-type (clause)
   (cond ((when (symbolp (car clause))
