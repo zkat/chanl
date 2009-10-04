@@ -172,7 +172,10 @@
   (%queue-length queue))
 
 (defun queue-peek (queue)
-  (%queue-peek queue))
+  (let ((peek (%queue-peek queue)))
+    (if (eq peek '#.queue-sentinel)
+        (values nil nil)
+        (values peek t))))
 
 (defun queue-full-p (queue)
   "Tests whether QUEUE is full"
