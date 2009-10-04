@@ -9,7 +9,7 @@
 (def-suite make-channel :in chanl)
 
 (test buffered
-  (let ((chan (make-instance 'buffered-channel :size 10)))
+  (let ((chan (make-instance 'bounded-channel :size 10)))
     (is (channelp chan))
     (is (channel-buffered-p chan))
     (is (queuep (channel-value chan)))
@@ -59,7 +59,7 @@
     (is (eq channel (send channel 'test nil)))))
 
 (test send-buffered
-  (let ((channel (make-instance 'buffered-channel :size 1)))
+  (let ((channel (make-instance 'bounded-channel :size 1)))
     (is (eq channel (send channel 'test nil)))
     (recv channel)
     (is (eq channel (send channel 'test)))
@@ -96,7 +96,7 @@
     (is (eq 'test (recv channel nil)))))
 
 (test recv-buffered
-  (let ((channel (make-instance 'buffered-channel :size 1)))
+  (let ((channel (make-instance 'bounded-channel :size 1)))
     (is (null (recv channel nil)))
     (is (null (nth-value 1 (recv channel nil))))
     (send channel 'test)
