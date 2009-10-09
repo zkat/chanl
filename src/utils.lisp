@@ -31,6 +31,9 @@
   `(let ((,variable ,test))
      (whimn ,variable ,@body)))
 
+(defmacro awhimn (test &body body)
+  `(whimn-bind it ,test ,@body))
+
 (defmacro define-speedy-function (name args &body body)
   `(progn (declaim (inline ,name))
           (defun ,name ,args
