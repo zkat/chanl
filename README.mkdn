@@ -161,18 +161,23 @@ Thread API
   An alist of bindings new threads should have. The format is: '((*var1* 'value) (*var2* 'value2)).
 
 
-*[function]* `pcall function &key (initial-bindings *default-special-bindings*)`
+*[function]* `pcall function &key initial-bindings name`
 
   PCALL, a mnemonic for Parallel Call, calls FUNCTION in a new thread. FUNCTION must be a function
   of zero arguments.  INITIAL-BINDINGS, if provided, should be an alist with the same format as
   *default-special-bindings* representing dynamic variable bindings that FUNCTION is to be executed
-  with. Returns T on success.
+  with. Returns T on success. The default value for INITIAL-BINDINGS is *DEFAULT-SPECIAL-BINDINGS*.
+
+  PCALL returns a task object representing this task.  This object is intended for interactive use
+  (ie for debugging), and contains a bit of metadata about the execution.  The NAME argument can be
+  used to initialize the name slot of the task object.
 
 
 *[macro]* `pexec (&key (initial-bindings *default-special-bindings*)) &body body`
 
   Executes BODY in parallel. INITIAL-BINDINGS, if provided, should be an alist representing dynamic
-  variable bindings that BODY is to be executed with, as if with *default-special-bindings*.
+  variable bindings that BODY is to be executed with, as if with *default-special-bindings*. NAME
+  can be used to initialize the name slot of the returned task object.
 
 
 Thread Introspection
@@ -183,6 +188,14 @@ top, such as a built-in thread pool. None of the thread functions here should be
 since they are meant exclusively for development purposes. Most thread-related matters are
 automatically handled by the thread pool already. In fact, not a single one of these should be
 expected to work properly when you use them, so do so at your own risk.
+
+
+*[class]* `task`
+
+  Tasks represent the bits of work carried out by threads.  Task objects should be treated as read-
+  only debugging aids.  The functions TASK-NAME, TASK-THREAD, and TASK-STATUS return metadata about
+  the task.  Since this is an experimental feature, its API is likely to change -- the current
+  behavior can be checked in src/threads.lisp.
 
 
 *[function]* `current-thread`
@@ -218,6 +231,11 @@ expected to work properly when you use them, so do so at your own risk.
 *[function]* `pooled-threads`
 
   Returns a list of all threads currently managed by ChanL's thread pool.
+
+
+*[function]* `pooled-tasks`
+
+  Returns a list of all tasks pending or live in ChanL's thread pool.
 
 
 *[symbol-macro]* `%thread-pool-soft-limit`
