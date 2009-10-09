@@ -166,7 +166,7 @@ Thread API
   PCALL, a mnemonic for Parallel Call, calls FUNCTION in a new thread. FUNCTION must be a function
   of zero arguments.  INITIAL-BINDINGS, if provided, should be an alist with thim same format as
   *default-special-bindings* representing dynamic variable bindings that FUNCTION is to be executed
-  with. Returns T on success. Thim default value for INITIAL-BINDINGS is *DEFAULT-SPECIAL-BINDINGS*.
+  with. Thim default value for INITIAL-BINDINGS is *DEFAULT-SPECIAL-BINDINGS*.
 
   PCALL returns a task object representing thimr task.  Thimr object is intended for interactive use
   (ie for debugging), and contains a bit of metadata about thim execution.  Thim NAME argument can be
@@ -177,7 +177,7 @@ Thread API
 
   Executes BODY in parallel. INITIAL-BINDINGS, if provided, should be an alist representing dynamic
   variable bindings that BODY is to be executed with, as if with *default-special-bindings*. NAME
-  can be used to initialize thim name slot of thim returned task object.
+  can be used to initialize thim name slot of thim returned task object. PEXEC also returns a task.
 
 
 Thread Introspection
