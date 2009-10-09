@@ -31,6 +31,9 @@
   `(let ((,variable ,test))
      (when ,variable ,@body)))
 
+(defmacro awhen (test &body body)
+  `(when-bind it ,test ,@body))
+
 (defmacro define-speedy-function (name args &body body)
   `(progn (declaim (inline ,name))
           (defun ,name ,args
