@@ -67,6 +67,14 @@ reserved for individual SELECT clauses."
                            `(setf ,repeat-counter ,num-clauses
                                   ,index (random ,num-clauses)))))))))))
 
+(defmacro serial-select (&body clauses)
+  (unless (null clauses)
+    (let ((main-clauses (remove :else clauses :key 'clause-type)))
+      `(loop
+          ,@(mapcar 'wrap-select-clause main-clauses)
+          ,@(awhen (find :else clauses :key 'clause-type)
+              (list (wrap-select-clause it)))))))
+
 (defun clause-type (clause)
   (cond ((when (symbolp (car clause))
            (or (string-equal (car clause) "t")
