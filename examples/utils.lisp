@@ -17,7 +17,7 @@ NOTE: This will also kill procs spawned from other threads."
        (unwind-protect (progn ,@body)
          (mapc 'kill (set-difference (all-procs) ,procs))))))
 
-(let ((output-channel (make-instance 'buffered-channel :size 1024)))
+(let ((output-channel (make-instance 'bounded-channel :size 1024)))
   (defun syncout (stream format-control &rest format-arguments)
     "Call `format' synchronously, with the same arguments. Returns no useful values."
     (send output-channel (list* stream format-control format-arguments))
