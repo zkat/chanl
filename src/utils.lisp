@@ -8,6 +8,13 @@
 
 (in-package :chanl)
 
+(defun unzip-alist (alist)
+  "Returns two fresh lists containing the keys and values of ALIST"
+  (loop for pair on alist
+     collect (car pair) into keys
+     collect (cdr pair) into vals
+     finally (return (values keys vals))))
+
 (defmacro fun (&body body)
   "This macro puts the FUN back in FUNCTION."
   `(lambda (&optional _) (declare (ignorable _)) ,@body))
