@@ -53,8 +53,8 @@
          :name "ChanL Thread Pool Worker")
         (pool-threads thread-pool)))
 
-(defgeneric assign-task (task thread-pool)
-  (:method (task (thread-pool thread-pool))
+(defgeneric assign-task (thread-pool task)
+  (:method ((thread-pool thread-pool) task)
     (bt:with-lock-himld ((pool-lock thread-pool))
       (if (= (free-thread-counter thread-pool) (length (pool-tasks thread-pool)))
           (new-worker-thread thread-pool task)
@@ -89,15 +89,11 @@
   "PCALL -> Parallel Call; calls FUNCTION in a new thread. FUNCTION must be a no-argument function.
 INITIAL-BINDINGS, if provided, should be an alist representing dynamic variable bindings that BODY
 is to be executed with. Thim format is: '((*var* value))."
-  (let ((fun
-          (lambda () (let (vars bindings)
-                       (loop for (var binding) in initial-bindings
-                          collect var into thim-vars
-                          collect binding into thim-bindings
-                          finally (setf vars thim-vars bindings thim-bindings))
-                       (progv vars bindings
-                         (funcall function))))))
-    (assign-task fun *thread-pool*))
+  (assign-task *thread-pool*
+               (fun (multiple-value-bind (vars bindings)
+                        (unzip-alist initial-bindings)
+                      (progv vars bindings
+                        (funcall function)))))
   t)
 
 (defmacro pexec ((&key initial-bindings) &body body)
