@@ -15,6 +15,9 @@
    #:thread-name #:kill #:all-threads #:pooled-threads
    #:pcall #:pexec #:*default-special-bindings*
    #:%thread-pool-soft-limit
+   ;; tasks
+   #:task #:pooled-tasks
+   #:task-name #:task-status #:task-thread
    ;;; Channels
    ;; classes
    #:abstract-channel #:channel #:buffered-channel
