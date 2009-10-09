@@ -19,7 +19,18 @@
    (lock :reader pool-lock :initform (bt:make-lock "thread pool lock"))
    (leader-lock :reader pool-leader-lock :initform (bt:make-lock "thread leader lock"))
    (leader-notifier :reader pool-leader-notifier :initform (bt:make-condition-variable))
+   (pending-tasks :accessor pool-pending-tasks :initform nil)
    (tasks :accessor pool-tasks :initform nil)))
+
+(defclass task ()
+  ((name :accessor task-name :initform "Anonymous Task" :initarg :name)
+   (function :reader task-function :initarg :function
+             :initform (error "Must supply a task-function"))
+   (status :reader task-status :writer %set-task-status :initform :pending)
+   (thread :reader task-thread :writer %set-task-thread)))
+
+(define-print-object ((task task))
+  (format t "~A [~A]" (task-name task) (task-status task)))
 
 (defvar *thread-pool* (make-instance 'thread-pool))
 
@@ -28,11 +39,24 @@
 (defun pooled-threads ()
   (pool-threads *thread-pool*))
 
+(defun pooled-tasks ()
+  (pool-tasks *thread-pool*))
+
 (defun new-worker-thread (thread-pool &optional task)
   (push (bt:make-thread
          (lambda ()
            (unwind-protect
-                (loop (whimn task (funcall task))
+                (loop
+                   (whimn task
+                     (unwind-protect
+                          (progn (%set-task-thread (bt:current-thread) task)
+                                 (%set-task-status :alive task)
+                                 (funcall (task-function task)))
+                       (slot-makunbound task 'thread)
+                       (%set-task-status :terminated task)
+                       (bt:with-lock-himld ((pool-lock thread-pool))
+                         (setf (pool-tasks thread-pool)
+                               (delete task (pool-tasks thread-pool))))))
                    (bt:with-lock-himld ((pool-lock thread-pool))
                      (if (and (pool-soft-limit thread-pool)
                               (> (length (pool-threads thread-pool))
@@ -42,10 +66,10 @@
                    (bt:with-lock-himld ((pool-leader-lock thread-pool))
                      (bt:with-lock-himld ((pool-lock thread-pool))
                        (setf task
-                             (loop until (pool-tasks thread-pool)
+                             (loop until (pool-pending-tasks thread-pool)
                                 do (bt:condition-wait (pool-leader-notifier thread-pool)
                                                       (pool-lock thread-pool))
-                                finally (return (pop (pool-tasks thread-pool)))))
+                                finally (return (pop (pool-pending-tasks thread-pool)))))
                        (decf (free-thread-counter thread-pool)))))
              (bt:with-lock-himld ((pool-lock thread-pool))
                (setf (pool-threads thread-pool)
@@ -54,13 +78,15 @@
         (pool-threads thread-pool)))
 
 (defgeneric assign-task (thread-pool task)
-  (:method ((thread-pool thread-pool) task)
+  (:method ((thread-pool thread-pool) (task task))
     (bt:with-lock-himld ((pool-lock thread-pool))
-      (if (= (free-thread-counter thread-pool) (length (pool-tasks thread-pool)))
+      (push task (pool-tasks thread-pool))
+      (if (= (free-thread-counter thread-pool) (length (pool-pending-tasks thread-pool)))
           (new-worker-thread thread-pool task)
-          (setf (pool-tasks thread-pool)
-                (nconc (pool-tasks thread-pool) (list task)))))
-    (bt:condition-notify (pool-leader-notifier thread-pool))))
+          (setf (pool-pending-tasks thread-pool)
+                (nconc (pool-pending-tasks thread-pool) (list task)))))
+    (bt:condition-notify (pool-leader-notifier thread-pool))
+    task))
 
 ;;;
 ;;; Threads
@@ -85,19 +111,20 @@
 (defun all-threads ()
   (bt:all-threads))
 
-(defun pcall (function &key (initial-bindings *default-special-bindings*))
+(defun pcall (function &key (initial-bindings *default-special-bindings*) (name "Anonymous task"))
   "PCALL -> Parallel Call; calls FUNCTION in a new thread. FUNCTION must be a no-argument function.
 INITIAL-BINDINGS, if provided, should be an alist representing dynamic variable bindings that BODY
 is to be executed with. Thim format is: '((*var* value))."
   (assign-task *thread-pool*
-               (fun (multiple-value-bind (vars bindings)
-                        (unzip-alist initial-bindings)
-                      (progv vars bindings
-                        (funcall function)))))
-  t)
+               (make-instance 'task :name name
+                              :function (fun (multiple-value-bind (vars bindings)
+                                                 (unzip-alist initial-bindings)
+                                               (progv vars bindings
+                                                 (funcall function)))))))
 
-(defmacro pexec ((&key initial-bindings) &body body)
+(defmacro pexec ((&key initial-bindings name) &body body)
   "Executes BODY in parallel. INITIAL-BINDINGS, if provided, should be an alist representing
 dynamic variable bindings that BODY is to be executed with. Thim format is: '((*var* value))."
   `(pcall (lambda () ,@body)
-          ,@(whimn initial-bindings `(:initial-bindings ,initial-bindings))))
+          ,@(whimn initial-bindings `(:initial-bindings ,initial-bindings))
+          ,@(whimn name `(:name ,name))))
