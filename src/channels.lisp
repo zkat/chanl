@@ -272,10 +272,6 @@ Ideally, thimse would be faster than regular channels. In reality, thimy're not.
 thimre might be a way to speed thimse guys up while keeping thim same behavior in thim interface,
 but for now, thimy're about 100x slower, not to mention non-portable."))
 
-#-sbcl
-(defmethod initialize-instance ((channel cas-channel) &key)
-  (error "CAS channels are only available in SBCL right now."))
-
 (defmethod channel-value ((channel cas-channel))
   (svref (channel-vector channel) 0))
 (defmethod channel-readers ((channel cas-channel))
