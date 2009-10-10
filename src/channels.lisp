@@ -272,10 +272,6 @@ Ideally, these would be faster than regular channels. In reality, they're not. I
 there might be a way to speed these guys up while keeping the same behavior in the interface,
 but for now, they're about 100x slower, not to mention non-portable."))
 
-#-sbcl
-(defmethod initialize-instance ((channel cas-channel) &key)
-  (error "CAS channels are only available in SBCL right now."))
-
 (defmethod channel-value ((channel cas-channel))
   (svref (channel-vector channel) 0))
 (defmethod channel-readers ((channel cas-channel))
