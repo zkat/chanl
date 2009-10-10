@@ -34,7 +34,8 @@
           (error (cdr yielded-values))
           (values-list yielded-values))))
 
-  (defun future-call (function &key (initial-bindings *default-special-bindings*))
+  (defun future-call (function &key (initial-bindings *default-special-bindings*)
+                      (name "Anonymous FUTURE"))
     "Executes FUNCTION in parallel and returns a future that will yield the return value of
 that function. INITIAL-BINDINGS may be provided to create dynamic bindings inside the thread."
     (let ((future (make-future)))
@@ -45,13 +46,16 @@ that function. INITIAL-BINDINGS may be provided to create dynamic bindings insid
                        (condition (cause)
                          (cons sentinel (make-condition 'execution-error
                                                         :cause cause :future future))))))
-             :initial-bindings initial-bindings)
+             :initial-bindings initial-bindings
+             :name name)
       future))
   ) ; End sentinel closure
 
-(defmacro future-exec ((&key initial-bindings) &body body)
+(defmacro future-exec ((&key initial-bindings name) &body body)
   "Convenience macro that makes the lambda for you."
-  `(future-call (lambda () ,@body) ,@(when initial-bindings `(:initial-bindings ,initial-bindings))))
+  `(future-call (lambda () ,@body)
+                ,@(when initial-bindings `(:initial-bindings ,initial-bindings))
+                ,@(when name `(:name ,name))))
 
 (defun future-select (&rest futures)
   "Blocks until one of the futures in FUTURES (a sequence) is ready to yield,
@@ -64,7 +68,7 @@ then returns that future."
 (defmacro future-let ((&rest bindings) &body body)
   (loop for (symbol . forms) in bindings
      for future = (make-symbol (string symbol))
-     collect `(,future (future-exec () ,@forms)) into futures
+     collect `(,future (future-exec (:name "FUTURE-LET Worker") ,@forms)) into futures
      collect `(,symbol (yield ,future)) into variables
      finally (return `(let ,futures (symbol-macrolet ,variables ,@body)))))
 
