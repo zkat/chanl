@@ -260,3 +260,86 @@ available value in the queue."))
 
 (defmethod channel-dequeue ((channel unbounded-channel))
   (pop (car (channel-value channel))))
+
+;;;
+;;; Supersexy Channels
+;;;
+
+(defclass fast-channel (abstract-channel)
+  ((vector :initform (vector *secret-unbound-value* 0 0 nil) :accessor channel-vector)))
+
+(defmethod channel-value ((channel fast-channel))
+  (svref (channel-vector channel) 0))
+(defmethod channel-readers ((channel fast-channel))
+  (svref (channel-vector channel) 1))
+(defmethod channel-writers ((channel fast-channel))
+  (svref (channel-vector channel) 2))
+(defmethod recv-grabbed-value-p ((channel fast-channel))
+  (svref (channel-vector channel) 3))
+
+(defun fast-channel-cas-set (slot-name channel value)
+  (let ((index (case slot-name (value 0) (readers 1) (writers 2) (recv-grabbed-value-p 3))))
+    (loop for old = (svref (channel-vector channel) index)
+         when (eq old (compare-and-swap (svref (channel-vector channel) index) old value))
+         return value)))
+
+(macrolet ((define-cas-channel-state-macro (name place)
+             `(defmacro ,name (channel &body body)
+                `(unwind-protect 
+                      (progn 
+                        (let (old new)
+                          (loop do
+                               (setf old (svref (channel-vector ,channel) ,',place))
+                               (setf new (1+ old))
+                               until (eql old (compare-and-swap
+                                               (svref (channel-vector ,channel) ,',place)
+                                               old new))))
+                        ,@body)
+                        (let (old new)
+                          (loop do
+                               (setf old (svref (channel-vector ,channel) ,',place))
+                               (setf new (1- old))
+                               until (eql old (compare-and-swap
+                                               (svref (channel-vector ,channel) ,',place)
+                                               old new))))
+                        (when (minusp (svref (channel-vector ,channel) ,',place))
+                          (error "Something bad happened"))))))
+  (define-cas-channel-state-macro with-cas-write-state 2)
+  (define-cas-channel-state-macro with-cas-read-state 1))
+
+;;; writing
+(defmethod send ((channel fast-channel) value &optional (blockp t))
+  (with-cas-write-state channel
+    (loop while (send-blocks-p channel)
+       unless (or blockp (channel-being-read-p channel))
+       do (return-from send nil))
+    (let ((block-status (channel-being-read-p channel)))
+      (channel-insert-value channel value)
+      (when block-status
+        (loop until (recv-grabbed-value-p channel)
+           finally (fast-channel-cas-set 'recv-grabbed-value-p channel nil))))))
+
+(defmethod send-blocks-p ((channel fast-channel))
+  (not (and (channel-being-read-p channel)
+            (eq (channel-value channel)
+                *secret-unbound-value*))))
+
+(defmethod channel-insert-value ((channel fast-channel) value)
+  (fast-channel-cas-set 'value channel value))
+
+;;; reading
+(defmethod recv ((channel fast-channel) &optional (blockp t))
+  (with-cas-read-state channel
+    (loop while (recv-blocks-p channel)
+       unless (or blockp (channel-being-written-p channel))
+       do (return-from recv (values nil nil)))
+    (multiple-value-prog1
+        (values (channel-grab-value channel) channel)
+      (fast-channel-cas-set 'recv-grabbed-value-p channel t))))
+
+(defmethod recv-blocks-p ((channel fast-channel))
+  (eq *secret-unbound-value* (channel-value channel)))
+
+(defmethod channel-grab-value ((channel fast-channel))
+  (prog1 (channel-value channel)
+    (fast-channel-cas-set 'value channel *secret-unbound-value*)))
