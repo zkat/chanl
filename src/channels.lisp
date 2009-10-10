@@ -285,7 +285,7 @@ but for now, they're about 100x slower, not to mention non-portable."))
 (defmethod recv-grabbed-value-p ((channel cas-channel))
   (svref (channel-vector channel) 3))
 
-(defun cas-channel-cas-set (slot-name channel value)
+(defun cas-channel-set (slot-name channel value)
   (let ((index (case slot-name (value 0) (readers 1) (writers 2) (recv-grabbed-value-p 3))))
     (loop for old = (svref (channel-vector channel) index)
          when (eq old (compare-and-swap (svref (channel-vector channel) index) old value))
@@ -325,7 +325,7 @@ but for now, they're about 100x slower, not to mention non-portable."))
       (channel-insert-value channel value)
       (when block-status
         (loop until (recv-grabbed-value-p channel)
-           finally (cas-channel-cas-set 'recv-grabbed-value-p channel nil))))))
+           finally (cas-channel-set 'recv-grabbed-value-p channel nil))))))
 
 (defmethod send-blocks-p ((channel cas-channel))
   (not (and (channel-being-read-p channel)
@@ -333,7 +333,7 @@ but for now, they're about 100x slower, not to mention non-portable."))
                 *secret-unbound-value*))))
 
 (defmethod channel-insert-value ((channel cas-channel) value)
-  (cas-channel-cas-set 'value channel value))
+  (cas-channel-set 'value channel value))
 
 ;;; reading
 (defmethod recv ((channel cas-channel) &optional (blockp t))
@@ -343,11 +343,11 @@ but for now, they're about 100x slower, not to mention non-portable."))
        do (return-from recv (values nil nil)))
     (multiple-value-prog1
         (values (channel-grab-value channel) channel)
-      (cas-channel-cas-set 'recv-grabbed-value-p channel t))))
+      (cas-channel-set 'recv-grabbed-value-p channel t))))
 
 (defmethod recv-blocks-p ((channel cas-channel))
   (eq *secret-unbound-value* (channel-value channel)))
 
 (defmethod channel-grab-value ((channel cas-channel))
   (prog1 (channel-value channel)
-    (cas-channel-cas-set 'value channel *secret-unbound-value*)))
+    (cas-channel-set 'value channel *secret-unbound-value*)))
