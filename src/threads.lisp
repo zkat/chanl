@@ -26,8 +26,8 @@
   ((name :accessor task-name :initform "Anonymous Task" :initarg :name)
    (function :reader task-function :initarg :function
              :initform (error "Must supply a task-function"))
-   (status :reader task-status :writer %set-task-status :initform :pending)
-   (thread :reader task-thread :writer %set-task-thread)))
+   (status :accessor task-status :initform :pending)
+   (thread :accessor task-thread :initform nil)))
 
 (define-print-object ((task task))
   (format t "~A [~A]" (task-name task) (task-status task)))
@@ -49,11 +49,11 @@
                 (loop
                    (when task
                      (unwind-protect
-                          (progn (%set-task-thread (bt:current-thread) task)
-                                 (%set-task-status :alive task)
+                          (progn (setf (task-thread task) (current-thread))
+                                 (setf (task-status task) :alive)
                                  (funcall (task-function task)))
-                       (slot-makunbound task 'thread)
-                       (%set-task-status :terminated task)
+                       (setf (task-thread task) nil)
+                       (setf (task-status task) :terminated)
                        (bt:with-lock-held ((pool-lock thread-pool))
                          (setf (pool-tasks thread-pool)
                                (delete task (pool-tasks thread-pool))))))
