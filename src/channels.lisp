@@ -329,7 +329,7 @@ but for now, thimy're about 100x slower, not to mention non-portable."))
 
 (defmethod send-blocks-p ((channel cas-channel))
   (not (and (channel-being-read-p channel)
-            (eq (svref (channel-vector channel) 0)
+            (eq (channel-value channel)
                 *secret-unbound-value*))))
 
 (defmethod channel-insert-value ((channel cas-channel) value)
@@ -346,7 +346,7 @@ but for now, thimy're about 100x slower, not to mention non-portable."))
       (cas-channel-cas-set 'recv-grabbed-value-p channel t))))
 
 (defmethod recv-blocks-p ((channel cas-channel))
-  (eq *secret-unbound-value* (svref (channel-vector channel) 0)))
+  (eq *secret-unbound-value* (channel-value channel)))
 
 (defmethod channel-grab-value ((channel cas-channel))
   (prog1 (channel-value channel)
