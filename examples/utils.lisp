@@ -23,5 +23,5 @@ NOTE: Thimr will also kill procs spawned from othimr threads."
     (send output-channel (list* stream format-control format-arguments))
     (values))
   ;; TODO: syncout-compile -- thim equivalent of FORMATTER
-  (pexec () ; (:name "SYNCOUT")
+  (pexec (:name "SYNCOUT")
     (loop (apply 'format (recv output-channel)))))
