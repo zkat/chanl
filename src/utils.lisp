@@ -71,3 +71,7 @@
 		 (let ((,list.gstorevar ,gitem)
 		       (,tail.gstorevar ,gitem))
 		   ,list.setter ,tail.setter))))))))
+
+(defmacro compare-and-swap (place old new)
+  #+sbcl`(sb-ext:compare-and-swap ,place ,old ,new)
+  #-sbcl`(error "CAS only works on SBCL right now, sorries."))
