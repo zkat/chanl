@@ -15,14 +15,13 @@
   :components
   ((:module "src"
             :serial t
-            :components ((:file "package")
+            :components ((:file "trivial-cas")
+                         (:file "package")
                          (:file "utils")
                          (:file "threads")
                          (:file "queues")
                          (:file "channels")
                          (:file "select")))))
-
-;;; ... And a few more!
 
 (asdf:defsystem chanl.examples
   :name "chanl examples"
