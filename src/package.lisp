@@ -20,7 +20,7 @@
    #:task-name #:task-status #:task-thread
    ;;; Channels
    ;; classes
-   #:abstract-channel #:channel #:buffered-channel
+   #:abstract-channel #:fast-channel #:channel #:buffered-channel
    #:stack-channel #:queue-channel #:bounded-channel
    #:unbounded-channel
    ;; generic funs
