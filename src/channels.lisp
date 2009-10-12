@@ -16,8 +16,8 @@
   (:method ((anything-else t)) nil)
   (:method ((channel abstract-channel)) t))
 
-(defgeneric send (chan value &optional blockp)
-  (:method ((channels sequence) value &optional (blockp t))
+(defgeneric send (chan value &key)
+  (:method ((channels sequence) value &key (blockp t))
     (loop do (mapc (fun (when (send _ value nil) (return _)))
                    channels)
        unless blockp return nil))
@@ -27,8 +27,8 @@ BLOCKP is true, SEND will continue to block until it's able to actually send a v
 NIL, SEND will immediately return NIL instead of blocking, if there's no channel available to send
 input into. When SEND succeeds, it returns the channel the value was sent into."))
 
-(defgeneric recv (chan &optional blockp)
-  (:method ((channels sequence) &optional (blockp t))
+(defgeneric recv (chan &key)
+  (:method ((channels sequence) &key (blockp t))
     (loop do (map nil (fun (multiple-value-bind (return-val succeeded) (recv _ nil)
                              (when succeeded (return (values return-val _)))))
                   channels)
@@ -74,7 +74,7 @@ blocking (if it would block)"))
   (define-channel-state-macro with-read-state channel-readers))
 
 ;;; Sending
-(defmethod send ((channel channel) value &optional (blockp t))
+(defmethod send ((channel channel) value &key (blockp t))
   (with-accessors ((lock channel-lock)
                    (recv-ok channel-recv-ok))
       channel
@@ -107,7 +107,7 @@ atomic operation, and should not be relied on in production. It's mostly meant f
 interactive/debugging purposes."))
 
 ;;; Receiving
-(defmethod recv ((channel channel) &optional (blockp t))
+(defmethod recv ((channel channel) &key (blockp t))
   (with-accessors ((lock channel-lock)
                    (send-ok channel-send-ok))
       channel
@@ -312,7 +312,7 @@ but for now, they're about 100x slower, not to mention non-portable."))
   (define-cas-channel-state-macro with-cas-read-state 1))
 
 ;;; writing
-(defmethod send ((channel cas-channel) value &optional (blockp t))
+(defmethod send ((channel cas-channel) value &key (blockp t))
   (with-cas-write-state channel
     (loop while (send-blocks-p channel)
        unless (or blockp (channel-being-read-p channel))
@@ -332,7 +332,7 @@ but for now, they're about 100x slower, not to mention non-portable."))
   (cas-channel-set 'value channel value))
 
 ;;; reading
-(defmethod recv ((channel cas-channel) &optional (blockp t))
+(defmethod recv ((channel cas-channel) &key (blockp t))
   (with-cas-read-state channel
     (loop while (recv-blocks-p channel)
        unless (or blockp (channel-being-written-p channel))
