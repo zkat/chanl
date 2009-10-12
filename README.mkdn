@@ -85,9 +85,9 @@ Channel API
   Note that this value might be further limited by memory constraints.
 
 
-*[generic function]* `send channel value &optional blockp`
+*[generic function]* `send channel value &key`
 
-*[method]* `send (channel channel) value &optional (blockp t)`
+*[method]* `send (channel channel) value &key (blockp t)`
 
   Tries to send VALUE into CHANNEL. If the channel is unbufferd or buffered but full, this operation
   will block until RECV is called on the channel. Returns the channel that the value was sent into.
@@ -95,7 +95,7 @@ Channel API
   block.
 
 
-*[method]* `send (channels sequence) value &optional (blockp t)`
+*[method]* `send (channels sequence) value &key (blockp t)`
 
   SEND may be used on a sequence of channels. SEND will linearly attempt to send VALUE into one of
   the channels in the sequence. It will return immediately as soon as it is able to send VALUE into
@@ -103,9 +103,9 @@ Channel API
   otherwise, it will return NIL when the sequence has been exhausted.
 
 
-*[generic function]* `recv channel &optional blockp`
+*[generic function]* `recv channel &key`
 
-*[method]* `recv (channel channel) &optional (blockp t)`
+*[method]* `recv (channel channel) &key (blockp t)`
 
   Tries to receive a value from CHANNEL. If the channel is unbuffered, or buffered but empty, this
   operation will block until SEND is called on the channel. Returns two values: 1. The value
@@ -113,7 +113,7 @@ Channel API
   operation will not block, and will return `(values NIL NIL)` if attempting it would block.
 
 
-*[method]* `recv (channel sequence) &optional (blockp t)`
+*[method]* `recv (channel sequence) &key (blockp t)`
 
   RECV may be used on a sequence of channels. RECV will linearly attempt to receive a value from
   one of the channels in teh sequence. It will return immediately as soon as one channel has a value
