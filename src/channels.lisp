@@ -18,7 +18,7 @@
 
 (defgeneric send (chan value &key)
   (:method ((channels sequence) value &key (blockp t))
-    (loop do (mapc (fun (when (send _ value nil) (return _)))
+    (loop do (mapc (fun (when (send _ value :blockp nil) (return _)))
                    channels)
        unless blockp return nil))
   (:documentation "Tries to send VALUE into CHAN. If a sequence of channels is provided
@@ -29,7 +29,7 @@ input into. When SEND succeeds, it returns the channel the value was sent into."
 
 (defgeneric recv (chan &key)
   (:method ((channels sequence) &key (blockp t))
-    (loop do (map nil (fun (multiple-value-bind (return-val succeeded) (recv _ nil)
+    (loop do (map nil (fun (multiple-value-bind (return-val succeeded) (recv _ :blockp nil)
                              (when succeeded (return (values return-val _)))))
                   channels)
        unless blockp
@@ -272,6 +272,15 @@ Ideally, these would be faster than regular channels. In reality, they're not. I
 there might be a way to speed these guys up while keeping the same behavior in the interface,
 but for now, they're about 100x slower, not to mention non-portable."))
 
+#+ (and ccl (or x86 x86-64))
+(defmethod initialize-instance :before ((channel cas-channel) &key)
+  (warn "COMPARE-AND-SWAP on x86-based CCL is experimental and buggy. Beware."))
+
+#- (or sbcl (and ccl (or x86 x86-64)))
+(defmethod initialize-instance ((channel cas-channel) &key)
+  (error "COMPARE-AND-SWAP is not supported on this platform yet.~%Platform details: ~A ~A"
+         (lisp-implementation-version) (lisp-implementation-type)))
+
 (defmethod channel-value ((channel cas-channel))
   (svref (channel-vector channel) 0))
 (defmethod channel-readers ((channel cas-channel))
@@ -291,23 +300,11 @@ but for now, they're about 100x slower, not to mention non-portable."))
              `(defmacro ,name (channel &body body)
                 `(unwind-protect
                       (progn
-                        (let (old new)
-                          (loop do
-                               (setf old (svref (channel-vector ,channel) ,',place))
-                               (setf new (1+ old))
-                               until (eql old (compare-and-swap
-                                               (svref (channel-vector ,channel) ,',place)
-                                               old new))))
+                        (atomic-incf (svref (channel-vector ,channel) ,',place))
                         ,@body)
-                        (let (old new)
-                          (loop do
-                               (setf old (svref (channel-vector ,channel) ,',place))
-                               (setf new (1- old))
-                               until (eql old (compare-and-swap
-                                               (svref (channel-vector ,channel) ,',place)
-                                               old new))))
-                        (when (minusp (svref (channel-vector ,channel) ,',place))
-                          (error "Something bad happened"))))))
+                   (atomic-incf (svref (channel-vector ,channel) ,',place) -1)
+                   (when (minusp (svref (channel-vector ,channel) ,',place))
+                     (error "Something bad happened"))))))
   (define-cas-channel-state-macro with-cas-write-state 2)
   (define-cas-channel-state-macro with-cas-read-state 1))
 
