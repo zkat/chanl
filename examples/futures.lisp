@@ -62,6 +62,7 @@ that function. INITIAL-BINDINGS may be provided to create dynamic bindings insid
 then returns that future."
   ;; This is an improvement. However, we should try to find some way of not "thrashing". - Adlai
   (setf futures (sort futures (lambda (a b) a b (zerop (random 2)))))
+  ;; This is incorrect. SEND/RECV-BLOCKS-P should not be used outside of the internals. - syko
   (loop for future = (find-if 'send-blocks-p futures :key 'future-channel)
      when future return future))
 
