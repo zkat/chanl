@@ -15,9 +15,16 @@
   (:import-from :sb-ext :compare-and-swap)
   #+ ccl
   (:import-from :ccl :defx86lapfunction)
-  (:export #:compare-and-swap))
+  (:export #:compare-and-swap
+           #:atomic-incf))
 
 (in-package :trivial-cas)
+
+(defmacro atomic-incf (place &optional (delta 1))
+  (let ((old (gensym)) (new (gensym)))
+    `(loop for ,old = ,place for ,new = (+ ,delta ,old)
+        when (eq ,old (compare-and-swap ,place ,old ,new))
+        return ,new)))
 
 #+ (and sbcl (not compare-and-swap-vops))
 (defmacro compare-and-swap (place old new)
@@ -26,6 +33,8 @@
 
 #+ (and ccl (or x86 x86-64))
 (progn
+  (warn "COMPARE-AND-SWAP on x86-based CCL is experimental and buggy. Beware.")
+
   (defmacro compare-and-swap (place old new)
     (if (atom place)
         (error 'type-error :datum place :expected-type 'cons)
