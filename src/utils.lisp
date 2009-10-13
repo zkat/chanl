@@ -36,6 +36,8 @@
 
 (defmacro when-bind (variable test &body body)
   `(let ((,variable ,test))
+     ,@(loop for form in body while (string-equal (car form) 'declare)
+          collect (pop body))
      (when ,variable ,@body)))
 
 (defmacro awhen (test &body body)
