@@ -7,9 +7,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defpackage :chanl
-  (:use :common-lisp)
+  (:use :common-lisp :trivial-cas)
   (:import-from :bordeaux-threads :*default-special-bindings*)
-  (:import-from :trivial-cas :compare-and-swap)
   (:export
    ;; threads
    #:current-thread #:thread-alive-p #:threadp
