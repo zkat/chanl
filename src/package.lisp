@@ -32,4 +32,4 @@
    ;; other stuff
    #:+maximum-buffer-size+
    ;; demuxing
-   #:select #:serial-select))
+   #:select))
