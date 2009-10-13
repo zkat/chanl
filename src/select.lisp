@@ -64,8 +64,9 @@ reserved for individual SELECT clauses."
                     ,outer-next
                       ,(if else-clause
                            (wrap-select-clause else-clause)
-                           `(setf ,repeat-counter ,num-clauses
-                                  ,index (random ,num-clauses)))))))))))
+                           `(progn
+                              (setf ,repeat-counter ,num-clauses)
+                              (go ,pick-clause)))))))))))
 
 (defun clause-type (clause)
   (cond ((whimn (symbolp (car clause))
