@@ -8,6 +8,10 @@
 
 (in-package :chanl)
 
+(defun ensure-list (x)
+  (if (listp x) x
+      (list x)))
+
 (defun unzip-alist (alist)
   "Returns two fresh lists containing the keys and values of ALIST"
   (loop for pair on alist
@@ -30,14 +34,21 @@
   `(let ,(mapcar (fun `(,_ (gensym ,(string _)))) names)
      ,@body))
 
+(defmacro pop-declarations (place)
+  "Returns and removes all leading declarations from PLACE, which should be
+a setf-able form. NOTE: Does not support docstrings."
+  (with-gensyms (form)
+    `(loop for ,form in ,place
+        while (handler-case (string-equal (car ,form) 'declare) (type-error ()))
+        collect (pop ,place))))
+
 (defmacro aif (test then &optional else)
   `(let ((it ,test))
      (if it ,then ,else)))
 
 (defmacro when-bind (variable test &body body)
   `(let ((,variable ,test))
-     ,@(loop for form in body while (string-equal (car form) 'declare)
-          collect (pop body))
+     ,@(pop-declarations body)
      (when ,variable ,@body)))
 
 (defmacro awhen (test &body body)
