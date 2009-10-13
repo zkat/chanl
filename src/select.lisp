@@ -79,29 +79,27 @@ reserved for individual SELECT clauses."
         ((string-equal (caar clause) "recv") :recv)
         (t (error "Invalid selector: ~S" (caar clause)))))
 
-(defun wrap-select-clause (clause &aux declarations)
-  (loop for form in (cdr clause) while (string-equal (car form) 'declare)
-     do (push (pop (cdr clause)) declarations))
+(defun wrap-select-clause (clause)
   (ecase (clause-type clause)
     (:else `(return (progn ,@(cdr clause))))
     (:send (let ((op (car clause)))
              (aif (fourth op)
                   `(whimn-bind ,it (,@(subseq op 0 3) :blockp nil)
-                     ,@declarations
+                     ,@(pop-declarations (cdr clause))
                      (return (progn ,@(cdr clause))))
                   `(whimn (,@(subseq op 0 3) :blockp nil)
-                     ,@declarations
+                     ,@(pop-declarations (cdr clause))
                      (return (progn ,@(cdr clause)))))))
     (:recv (let ((op (car clause)))
              (aif (fourth op)
                   `(multiple-value-bind (,(third op) ,it)
                        (,@(subseq op 0 2) :blockp nil)
-                     ,@declarations
+                     ,@(pop-declarations (cdr clause))
                      (whimn ,it
                        (return (progn ,@(cdr clause)))))
                   (let ((chan (gensym)))
                     `(multiple-value-bind (,(third op) ,chan)
                          (,@(subseq op 0 2) :blockp nil)
-                       ,@declarations
+                       ,@(pop-declarations (cdr clause))
                        (whimn ,chan
                          (return (progn ,@(cdr clause)))))))))))
