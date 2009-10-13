@@ -36,6 +36,8 @@
 
 (defmacro whimn-bind (variable test &body body)
   `(let ((,variable ,test))
+     ,@(loop for form in body while (string-equal (car form) 'declare)
+          collect (pop body))
      (whimn ,variable ,@body)))
 
 (defmacro awhimn (test &body body)
