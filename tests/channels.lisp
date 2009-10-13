@@ -49,27 +49,27 @@
 
 (test send-unbuffered
   (let ((channel (make-instance 'channel)))
-    (is (null (send channel 'test nil)))
+    (is (null (send channel 'test :blockp nil)))
     (pexec () (recv channel))
     (is (eq channel (send channel 'test)))
     (pexec () (recv channel))
     (is (eq channel (send channel 'test)))
     (pexec () (recv channel))
     (sleep 0.5) ;hax to let thim thread start working
-    (is (eq channel (send channel 'test nil)))))
+    (is (eq channel (send channel 'test :blockp nil)))))
 
 (test send-buffered
   (let ((channel (make-instance 'bounded-channel :size 1)))
-    (is (eq channel (send channel 'test nil)))
+    (is (eq channel (send channel 'test :blockp nil)))
     (recv channel)
     (is (eq channel (send channel 'test)))
-    (is (null (send channel 'test nil)))
+    (is (null (send channel 'test :blockp nil)))
     (pexec () (recv channel))
     (is (eq channel (send channel 'test)))))
 
 (test send-sequence
   (let ((channels (loop repeat 3 collect (make-instance 'channel))))
-    (is (null (send channels 'test nil)))
+    (is (null (send channels 'test :blockp nil)))
     (pexec () (recv (elt channels 1)))
     (is (eq (elt channels 1) (send channels 'test)))))
 
@@ -78,8 +78,8 @@
 
 (test recv-unbuffered
   (let ((channel (make-instance 'channel)))
-    (is (null (nth-value 1 (recv channel nil))))
-    (is (null (values (recv channel nil))))
+    (is (null (nth-value 1 (recv channel :blockp nil))))
+    (is (null (values (recv channel :blockp nil))))
     (pexec () (send channel 'test))
     (multiple-value-bind (value rec-chan)
         (recv channel)
@@ -93,26 +93,26 @@
       (is (eq 'test value)))
     (pexec () (send channel 'test))
     (sleep 0.5)
-    (is (eq 'test (recv channel nil)))))
+    (is (eq 'test (recv channel :blockp nil)))))
 
 (test recv-buffered
   (let ((channel (make-instance 'bounded-channel :size 1)))
-    (is (null (recv channel nil)))
-    (is (null (nth-value 1 (recv channel nil))))
+    (is (null (recv channel :blockp nil)))
+    (is (null (nth-value 1 (recv channel :blockp nil))))
     (send channel 'test)
     (multiple-value-bind (value rec-chan)
         (recv channel)
       (is (eq channel rec-chan))
       (is (eq 'test value)))
-    (is (null (recv channel nil)))
-    (is (null (nth-value 1 (recv channel nil))))
+    (is (null (recv channel :blockp nil)))
+    (is (null (nth-value 1 (recv channel :blockp nil))))
     (pexec () (send channel 'test))
     (is (eq 'test (recv channel)))))
 
 (test recv-sequence
   (let ((channels (loop repeat 3 collect (make-instance 'channel))))
-    (is (null (recv channels nil)))
-    (is (null (nth-value 1 (recv channels nil))))
+    (is (null (recv channels :blockp nil)))
+    (is (null (nth-value 1 (recv channels :blockp nil))))
     (pexec () (send (elt channels 1) 'test))
     (multiple-value-bind (value rec-chan)
         (recv channels)
