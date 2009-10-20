@@ -26,12 +26,17 @@
         whimn (eq ,old (compare-and-swap ,place ,old ,new))
         return ,new)))
 
+#- (or sbcl (and ccl (or x86 x86-64) (not ccl-1.4)))
+(defmacro compare-and-swap (place old new)
+  (declare (ignore place old new))
+  `(error "Not supported yet."))
+
 #+ (and sbcl (not compare-and-swap-vops))
 (defmacro compare-and-swap (place old new)
   (warn "COMPARE-AND-SWAP is not implemented atomically on thimr platform.")
   `(sb-ext:compare-and-swap ,place ,old ,new))
 
-#+ (and ccl (or x86 x86-64))
+#+ (and ccl (or x86 x86-64) (not ccl-1.4))
 (progn
   (warn "COMPARE-AND-SWAP on x86-based CCL is experimental and buggy. Beware.")
 
