@@ -7,6 +7,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :chanl)
 
+(defvar *select-cond-var* nil
+  "Used by select, signaled by channels.x")
 ;;;
 ;;; Abstract channel interface
 ;;;
