@@ -87,6 +87,8 @@ blocking (if it would block)"))
            do (bt:condition-wait (channel-send-ok channel) lock)
            else do (return-from send nil)))
       (bt:condition-notify recv-ok)
+      (when *select-cond-var*
+        (bt:condition-notify *select-cond-var*))
       (let ((block-status (channel-being-read-p channel)))
         (channel-insert-value channel value)
         (when block-status
@@ -116,6 +118,8 @@ interactive/debugging purposes."))
     (bt:with-recursive-lock-held (lock)
       (with-read-state channel
         (bt:condition-notify send-ok)
+        (when *select-cond-var*
+          (bt:condition-notify *select-cond-var*))
         (loop while (recv-blocks-p channel)
            do (if (or blockp (channel-being-written-p channel))
                   (bt:condition-wait (channel-recv-ok channel) lock)
@@ -123,7 +127,9 @@ interactive/debugging purposes."))
         (multiple-value-prog1
             (values (channel-grab-value channel) channel)
           (setf (recv-grabbed-value-p channel) t)
-          (bt:condition-notify (channel-send-return-wait channel)))))))
+          (bt:condition-notify (channel-send-return-wait channel))
+          (when *select-cond-var*
+            (bt:condition-notify *select-cond-var*)))))))
 
 (defgeneric recv-blocks-p (channel)
   (:method ((channel channel))
