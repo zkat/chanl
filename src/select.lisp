@@ -40,37 +40,34 @@ reserved for individual SELECT clauses."
            (num-clauses (length main-clauses))
            (clause-tags (loop for i from 1 to num-clauses collect
                              (make-symbol (format nil "~:@(~:R-clause~)" i)))))
-      (with-gensyms (repeat-counter index pick-clause inner-next outer-next lock)
+      (with-gensyms (repeat-counter index pick-clause inner-next outer-next)
         `(block nil
            ;; todo - make SELECT pause for *select-cond-var*
-           (let ((*select-cond-var* (bt:make-condition-variable))
-                 (,lock (bt:make-lock)))
-             (bt:with-lock-held (,lock)
-              ,(if (null main-clauses)
-                   (wrap-select-clause else-clause)
-                   `(let ((,repeat-counter ,num-clauses)
-                          (,index (random ,num-clauses)))
-                      (tagbody
-                         ,pick-clause
-                         (when (zerop ,repeat-counter)
-                           (go ,outer-next))
-                         (ecase ,index
-                           ,@(loop for n below num-clauses and tag in clause-tags
-                                collect `(,n (go ,tag))))
-                         ,@(loop for clause in main-clauses and tag in clause-tags
-                              nconc `(,tag ,(wrap-select-clause clause) (go ,inner-next)))
-                         ,inner-next
-                         (incf ,index) (decf ,repeat-counter)
-                         (when (= ,num-clauses ,index)
-                           (setf ,index 0))
-                         (go ,pick-clause)
-                         ,outer-next
-                         ,(if else-clause
-                              (wrap-select-clause else-clause)
-                              `(progn
-                                 (setf ,repeat-counter ,num-clauses)
-                                 (bt:condition-wait *select-cond-var* ,lock)
-                                 (go ,pick-clause)))))))))))))
+           (let ((*select-cond-var* (bt:make-condition-variable)))
+             ,(if (null main-clauses)
+                  (wrap-select-clause else-clause)
+                  `(let ((,repeat-counter ,num-clauses)
+                         (,index (random ,num-clauses)))
+                     (tagbody
+                        ,pick-clause
+                        (when (zerop ,repeat-counter)
+                          (go ,outer-next))
+                        (ecase ,index
+                          ,@(loop for n below num-clauses and tag in clause-tags
+                               collect `(,n (go ,tag))))
+                        ,@(loop for clause in main-clauses and tag in clause-tags
+                             nconc `(,tag ,(wrap-select-clause clause) (go ,inner-next)))
+                        ,inner-next
+                        (incf ,index) (decf ,repeat-counter)
+                        (when (= ,num-clauses ,index)
+                          (setf ,index 0))
+                        (go ,pick-clause)
+                        ,outer-next
+                        ,(if else-clause
+                             (wrap-select-clause else-clause)
+                             `(progn
+                                (setf ,repeat-counter ,num-clauses)
+                                (go ,pick-clause))))))))))))
 
 (defun clause-type (clause)
   (cond ((when (symbolp (car clause))
