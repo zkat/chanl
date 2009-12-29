@@ -9,8 +9,6 @@
 
 (defvar *select-cond-var* nil
   "Used by select, signaled by channels.x")
-(defvar *select-can-continue* nil)
-
 ;;;
 ;;; Abstract channel interface
 ;;;
@@ -89,9 +87,8 @@ blocking (if it would block)"))
            do (bt:condition-wait (channel-send-ok channel) lock)
            else do (return-from send nil)))
       (bt:condition-notify recv-ok)
-      (when (and *select-cond-var* (boundp *select-can-continue*))
-        (bt:condition-notify *select-cond-var*)
-        (setf *select-can-continue* t))
+      (when *select-cond-var*
+        (bt:condition-notify *select-cond-var*))
       (let ((block-status (channel-being-read-p channel)))
         (channel-insert-value channel value)
         (when block-status
@@ -121,9 +118,8 @@ interactive/debugging purposes."))
     (bt:with-recursive-lock-held (lock)
       (with-read-state channel
         (bt:condition-notify send-ok)
-        (when (and *select-cond-var* (boundp *select-can-continue*))
-          (bt:condition-notify *select-cond-var*)
-          (setf *select-can-continue* t))
+        (when *select-cond-var*
+          (bt:condition-notify *select-cond-var*))
         (loop while (recv-blocks-p channel)
            do (if (or blockp (channel-being-written-p channel))
                   (bt:condition-wait (channel-recv-ok channel) lock)

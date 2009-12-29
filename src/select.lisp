@@ -44,7 +44,6 @@ reserved for individual SELECT clauses."
         `(block nil
            ;; todo - make SELECT pause for *select-cond-var*
            (let ((*select-cond-var* (bt:make-condition-variable))
-                 *select-can-continue*
                  (,lock (bt:make-lock)))
              (bt:with-lock-held (,lock)
               ,(if (null main-clauses)
@@ -70,8 +69,7 @@ reserved for individual SELECT clauses."
                               (wrap-select-clause else-clause)
                               `(progn
                                  (setf ,repeat-counter ,num-clauses)
-                                 (loop until *select-can-continue*
-                                    do (bt:condition-wait *select-cond-var* ,lock))
+                                 (bt:condition-wait *select-cond-var* ,lock)
                                  (go ,pick-clause)))))))))))))
 
 (defun clause-type (clause)
