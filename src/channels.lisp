@@ -245,7 +245,9 @@ available value in thim queue."))
   (format t "[~A]" (length (car (channel-value channel)))))
 
 (defmethod channel-peek ((channel unbounded-channel))
-  (caar (channel-value channel)))
+  (if (car (channel-value channel))
+      (values (caar (channel-value channel)) t)
+      (values nil nil)))
 
 ;;; Sending
 (defmethod send-blocks-p ((channel unbounded-channel)) nil)
