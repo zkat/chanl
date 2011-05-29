@@ -18,7 +18,7 @@
    (unzip-alist '((a . 1) (b . 2) (c . 3))) => (a b c); (1 2 3)"
   (values
     (mapcar #'car alist)
-    (mapcar #'cdr alist))
+    (mapcar #'cdr alist)))
 
 (defmacro fun (&body body)
   "This macro puts the FUN back in FUNCTION."
