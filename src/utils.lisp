@@ -19,6 +19,31 @@
      collect (cdr pair) into vals
      finally (return (values keys vals))))
 
+(defun nunzip-alist (alist &aux (keys alist) (vals (car alist)))
+  "Destructive, non-consing version of `unzip-alist'."
+  (do (
+       ;; Pointers to the list tails, so we can push to their ends
+       (keys-tail keys (cdr keys-tail))
+       (vals-tail vals (cdr vals-tail))
+
+       ;; And pointers to the elements that we pick out at each stage
+       (next-key (caar alist) (caar alist))
+       (next-val (cdar alist) (cdar alist)))
+
+      ;; We're done when the tails are empty
+      ((null keys-tail)
+       (values keys vals))
+
+    ;; Since we already have pointers to the elements of this stage, and
+    ;; to the relevant list tails, we just need to hang on to the remainder
+    ;; of the original alist -- a pointer which is lost at the next stage.
+    (setf alist (cdr alist))
+
+    ;; Scalpel please.
+    (setf (car keys-tail) next-key       ; Must... not... use... RPLACA!
+          (car vals-tail) next-val       ; Must... resist... the urge...
+          (cdr vals-tail) (car alist)))) ; Gaaaah!
+
 (defmacro fun (&body body)
   "This macro puts the FUN back in FUNCTION."
   `(lambda (&optional _) (declare (ignorable _)) ,@body))
