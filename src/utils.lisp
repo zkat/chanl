@@ -14,7 +14,7 @@
 
 (defun unzip-alist (alist)
   "Returns two fresh lists containing the keys and values of ALIST"
-  (loop for pair on alist
+  (loop for pair in alist
      collect (car pair) into keys
      collect (cdr pair) into vals
      finally (return (values keys vals))))
