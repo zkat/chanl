@@ -13,11 +13,12 @@
       (list x)))
 
 (defun unzip-alist (alist)
-  "Returns two fresh lists containing the keys and values of ALIST"
-  (loop for pair on alist
-     collect (car pair) into keys
-     collect (cdr pair) into vals
-     finally (return (values keys vals))))
+  "Returns two fresh lists containing the keys and values of ALIST
+
+   (unzip-alist '((a . 1) (b . 2) (c . 3))) => (a b c); (1 2 3)"
+  (values
+    (mapcar #'car alist)
+    (mapcar #'cdr alist)))
 
 (defmacro fun (&body body)
   "This macro puts the FUN back in FUNCTION."
