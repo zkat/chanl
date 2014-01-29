@@ -7,13 +7,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :chanl)
 
-;;; Setting up the :CHANL package to include Eos stuff
+;;; Setting up the :CHANL package to include 5AM stuff
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (import '(Eos:def-suite Eos:run! Eos:is Eos:in-suite Eos:signals Eos:def-fixture))
+  (import '(5am:def-suite 5am:run! 5am:is 5am:in-suite 5am:signals))
   (export 'run-all-tests))
 
 (defmacro test (name &body body)
-  `(eos:test ,name ,@body))
+  `(5am:test ,name ,@body))
 
 ;;; Preparing the test suite
 (def-suite chanl)
