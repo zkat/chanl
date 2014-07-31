@@ -13,7 +13,7 @@
   (:nicknames :trivial-cas)
   #+ (and sbcl compare-and-swap-vops)
   (:import-from :sb-ext :compare-and-swap)
-  #+ ccl
+  #+ (and ccl (or x86 x86-64))
   (:import-from :ccl :defx86lapfunction)
   (:export #:compare-and-swap
            #:atomic-incf))
