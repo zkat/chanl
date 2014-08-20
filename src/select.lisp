@@ -92,13 +92,13 @@ reserved for individual SELECT clauses."
                      (return (progn ,@(cdr clause)))))))
     (:recv (let ((op (car clause)))
              (aif (fourth op)
-                  `(multiple-value-bind (,(third op) ,it)
+                  `(multiple-value-bind (,(or (third op) (gensym)) ,it)
                        (,@(subseq op 0 2) :blockp nil)
                      ,@(pop-declarations (cdr clause))
                      (when ,it
                        (return (progn ,@(cdr clause)))))
                   (let ((chan (gensym)))
-                    `(multiple-value-bind (,(third op) ,chan)
+                    `(multiple-value-bind (,(or (third op) (gensym)) ,chan)
                          (,@(subseq op 0 2) :blockp nil)
                        ,@(pop-declarations (cdr clause))
                        (when ,chan
