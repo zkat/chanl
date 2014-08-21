@@ -45,7 +45,7 @@ You can run the test suite to see how well it works on yours:
 
        (asdf:oos 'asdf:test-op 'chanl)
 
-Note that the test-suite depends on Eos, which can be found at http://github.com/adlai/eos
+Note that the test-suite depends on 5AM, which can be found at http://github.com/sionescu/fiveam
 
 
 Channel API
