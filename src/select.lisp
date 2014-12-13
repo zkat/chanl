@@ -12,6 +12,10 @@
 ;;;
 
 (defmacro select (&body clauses)
+  ;; TODO true blocking select. a plan:
+  ;; you basically have another channel behind each select clause
+  ;; the process executing the select blocks on receiving from that channel,
+  ;; and possible select clauses send some indication when they're ready
   "Non-deterministically select a non-blocking clause to execute.
 
 The syntax is:
@@ -29,7 +33,7 @@ The syntax is:
 SELECT will first attempt to find a clause with a non-blocking op, and execute it. Execution of the
 check-if-blocks-and-do-it part is atomic, but execution of the clause's body once the SEND/RECV
 clause executes is NOT atomic. If all channel clauses would block, and no else clause is provided,
-SELECT will block until one of the clauses is available for execution.
+SELECT will thrash-idle (an undesirable state!) until one of the clauses is available for execution.
 
 SELECT's non-determinism is, in fact, very non-deterministic. Clauses are chosen at random, not
 in the order they are written. It's worth noting that SEND/RECV, when used on sequences of
