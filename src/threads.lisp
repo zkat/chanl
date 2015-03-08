@@ -73,7 +73,7 @@
                        (decf (free-thread-counter thread-pool)))))
              (bt:with-lock-held ((pool-lock thread-pool))
                (setf (pool-threads thread-pool)
-                     (delete (bt:current-thread) (pool-threads thread-pool))))))
+                     (remove (bt:current-thread) (pool-threads thread-pool))))))
          :name "ChanL Thread Pool Worker")
         (pool-threads thread-pool)))
 
