@@ -56,7 +56,7 @@
                        (setf (task-status task) :terminated)
                        (bt:with-lock-held ((pool-lock thread-pool))
                          (setf (pool-tasks thread-pool)
-                               (delete task (pool-tasks thread-pool))))))
+                               (remove task (pool-tasks thread-pool))))))
                    (bt:with-lock-held ((pool-lock thread-pool))
                      (if (and (pool-soft-limit thread-pool)
                               (> (length (pool-threads thread-pool))
