@@ -17,6 +17,7 @@
   (:method ((channel abstract-channel)) t))
 
 (defgeneric send (chan value &key)
+  (:method ((channels null) value &key) (warn "Ignored SEND to empty list"))
   (:method ((channels sequence) value &key (blockp t))
     (loop do (mapc (fun (when (send _ value :blockp nil) (return _)))
                    channels)
@@ -28,6 +29,7 @@ NIL, SEND will immediately return NIL instead of blocking, if there's no channel
 input into. When SEND succeeds, it returns the channel the value was sent into."))
 
 (defgeneric recv (chan &key)
+  (:method ((channels null) &key) (warn "Ignored RECV from empty list"))
   (:method ((channels sequence) &key (blockp t))
     (loop do (map nil (fun (multiple-value-bind (return-val succeeded) (recv _ :blockp nil)
                              (when succeeded (return (values return-val _)))))
