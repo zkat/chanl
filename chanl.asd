@@ -21,7 +21,8 @@
                          (:file "threads")
                          (:file "queues")
                          (:file "channels")
-                         (:file "select")))))
+                         (:file "select")
+                         (:file "actors")))))
 
 (asdf:defsystem chanl.examples
   :name "chanl examples"
@@ -51,7 +52,8 @@
                          (:file "threads")
                          (:file "queues")
                          (:file "channels")
-                         (:file "select")))))
+                         (:file "select")
+                         (:file "actors")))))
 
 (defmethod asdf:perform ((op asdf:test-op) (system (eql (asdf:find-system :chanl))))
   (format t "~2&*******************~@

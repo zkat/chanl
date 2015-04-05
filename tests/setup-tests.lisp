@@ -34,7 +34,7 @@
                 *****************************************~@
                 ** If there were any failures on your  **~@
                 ** platform, please report them to me: **~@
-                **  (zkat at sykosomatic dot org)  **~@
+                **    (zkat at sykosomatic dot org)    **~@
                 ** or just file a bugreport on github: **~@
-                **   github.com/zkat/chanl/issues  **~@
+                **     github.com/zkat/chanl/issues    **~@
                 *****************************************~%"))
