@@ -6,9 +6,51 @@
 (in-package :chanl)
 
 (def-suite channels :in chanl)
-(def-suite make-channel :in chanl)
+(def-suite construction :in channels)
+(in-suite construction)
 
-(test buffered
+(test make-unbuffered
+  (let ((chan (make-instance 'channel)))
+    (is (channelp chan))
+    (is (not (channel-buffered-p chan)))
+    (is (= 0 (channel-readers chan)))
+    (is (= 0 (channel-writers chan)))
+    (is (eq *secret-unbound-value* (channel-value chan)))
+    (is (send-blocks-p chan))
+    (is (recv-blocks-p chan))
+    ;; We don't really have predicates for these, but if they exist, we assume
+    ;; they're what they're suposed to be.
+    (is (channel-lock chan))
+    (is (channel-send-ok chan))
+    (is (channel-recv-ok chan))))
+
+#+ (or sbcl (and ccl (or x86 x86_64)))
+(test make-cas
+  (let ((chan (make-instance 'cas-channel)))
+    (is (channelp chan))
+    (is (not (channel-buffered-p chan)))
+    (is (= 0 (channel-readers chan)))
+    (is (= 0 (channel-writers chan)))
+    (is (eq *secret-unbound-value* (channel-value chan)))
+    (is (send-blocks-p chan))
+    (is (recv-blocks-p chan))))
+
+(test make-stack
+  (let ((chan (make-instance 'stack-channel)))
+    (is (channelp chan))
+    (is (channel-buffered-p chan))
+    (is (null (channel-value chan)))
+    (is (= 0 (channel-readers chan)))
+    (is (= 0 (channel-writers chan)))
+    (is (not (send-blocks-p chan)))
+    (is (recv-blocks-p chan))
+    ;; We don't really have predicates for these, but if they exist, we assume
+    ;; they're what they're suposed to be.
+    (is (channel-lock chan))
+    (is (channel-send-ok chan))
+    (is (channel-recv-ok chan))))
+
+(test make-bounded
   (let ((chan (make-instance 'bounded-channel :size 10)))
     (is (channelp chan))
     (is (channel-buffered-p chan))
@@ -24,14 +66,14 @@
     (is (channel-send-ok chan))
     (is (channel-recv-ok chan))))
 
-(test unbuffered
-  (let ((chan (make-instance 'channel)))
+(test make-unbounded
+  (let ((chan (make-instance 'unbounded-channel)))
     (is (channelp chan))
-    (is (not (channel-buffered-p chan)))
+    (is (channel-buffered-p chan))
+    (is (equal '(()) (channel-value chan)))
     (is (= 0 (channel-readers chan)))
     (is (= 0 (channel-writers chan)))
-    (is (eq *secret-unbound-value* (channel-value chan)))
-    (is (send-blocks-p chan))
+    (is (not (send-blocks-p chan)))
     (is (recv-blocks-p chan))
     ;; We don't really have predicates for these, but if they exist, we assume
     ;; they're what they're suposed to be.
@@ -39,11 +81,11 @@
     (is (channel-send-ok chan))
     (is (channel-recv-ok chan))))
 
-(test invalid
+(test make-invalid
   (signals error (make-instance 'buffered-channel :size nil))
   (signals error (make-instance 'buffered-channel :size -1)))
 
-(def-suite messaging :in chanl)
+(def-suite messaging :in channels)
 (def-suite sending :in messaging)
 (in-suite sending)
 
@@ -56,6 +98,18 @@
     (is (eq channel (send channel 'test)))
     (pexec () (recv channel))
     (sleep 0.5) ;hax to let the thread start working
+    (is (eq channel (send channel 'test :blockp nil)))))
+
+#+sbcl                                  ; FIXME! livelock on ccl
+(test send-cas
+  (let ((channel (make-instance 'cas-channel)))
+    (is (null (send channel 'test :blockp nil)))
+    (pexec () (recv channel))
+    (is (eq channel (send channel 'test)))
+    (pexec () (recv channel))
+    (is (eq channel (send channel 'test)))
+    (pexec () (recv channel))
+    (sleep 0.5)                         ; hax, wait for read-state
     (is (eq channel (send channel 'test :blockp nil)))))
 
 (test send-buffered

@@ -131,8 +131,7 @@ interactive/debugging purposes."))
 
 (defgeneric channel-grab-value (channel)
   (:method ((channel channel))
-    (prog1 (channel-value channel)
-      (setf (channel-value channel) *secret-unbound-value*))))
+    (shiftf (channel-value channel) *secret-unbound-value*)))
 
 ;;;
 ;;; Buffered channels
@@ -322,7 +321,8 @@ but for now, they're about 100x slower, not to mention non-portable."))
       (channel-insert-value channel value)
       (when block-status
         (loop until (recv-grabbed-value-p channel)
-           finally (cas-channel-set 'recv-grabbed-value-p channel nil))))))
+           finally (cas-channel-set 'recv-grabbed-value-p channel nil))))
+    channel))
 
 (defmethod send-blocks-p ((channel cas-channel))
   (not (and (channel-being-read-p channel)
