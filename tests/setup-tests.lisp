@@ -28,7 +28,7 @@
   (format t "~2&*******************~@
                 ** Starting test **~@
                 *******************~%")
-  (run-all-tests)
+  (handler-bind ((style-warning #'muffle-warning)) (run-all-tests))
   (format t "~2&*****************************************~@
                 **            Tests finished           **~@
                 *****************************************~@

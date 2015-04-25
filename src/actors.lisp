@@ -3,14 +3,18 @@
 ;;;; Copyright © 2015 Adlai Chandrasekhar
 ;;;;
 ;;;; Channel-Chattering Actors - A Prototype
-;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; TODO: http://archive.adaic.com/standards/83rat/html/ratl-13-02.html#13.2.4
+;;;; The goal is for channels to be as invisible as threads and pointers
+;;;; When that happens, this may very well just belong in a separate library
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defpackage #:chanl.actors
   (:use #:cl #:chanl) (:import-from #:chanl #:ensure-list)
   (:export #:actor #:perform #:halt #:name #:slot-channel #:compute-tubes
-           #:execute #:command #:abbrev #:state #:ensure-running #:boss))
+           #:execute #:command #:abbrev #:state #:ensure-running #:boss #:die))
 
 (in-package #:chanl.actors)
+
+(defvar *boss*)
 
 ;;; TODO: factor all this apart (delegates -> sheeple? merge into bossing?)
 (defclass actor ()
@@ -20,24 +24,31 @@
    ;; this is traditional "message passing", each actor gets its own state
    (state :initform 'perform :documentation "Represents/performs actor's state")
    (tubes :documentation "Channels used for communication")
-   (boss :documentation "For whom['s benefit] the bell tolls"
-         :reader boss :initarg :boss)
+   (boss :documentation "For whom['s benefit] the bell tolls" :reader boss
+         :initform *boss* :initarg :boss :type (or bt:thread boss))
    (command :documentation "Command being executed by the actor")))
 
-(defun slot-channel (actor slot) (cdr (assoc slot (slot-value actor 'tubes))))
+(defun slot-channel (actor slot)
+  "Returns the channel associated with `slot' in `actor'"
+  (let ((spec (cdr (assoc slot (slot-value actor 'tubes)))))
+    (etypecase spec (channel spec) (symbol (slot-value actor spec)))))
 
 (defgeneric compute-tubes (actor)
-  (:documentation "Calculates the list of communication slots for `actor'")
+  (:documentation "Calculates the list of communication slots for `actor'.
+Methods should return a list of specifications (or a single one as an atom)")
   (:method-combination list :most-specific-last)  ; TODO: lazy-append
-  (:method :around ((actor actor))
+  (:method :around ((actor actor))      ; &rest?
+    "Combines the specifications, creating channels if necessary"
     (mapcan (lambda (tubing)
               (mapcar (lambda (tube)
                         (destructuring-bind (name . spec) (ensure-list tube)
-                          (cons name (apply #'make-instance
-                                            (or spec '(channel))))))
-                      (ensure-list tubing)))
+                          (cons name    ; ( data-slot :from channel-slot )
+                                (if (member (car spec)'(:to :from)) (cadr spec)
+                                    (apply #'make-instance
+                                           (or spec '(channel)))))))
+                      (ensure-list tubing))) ; in case a method returns an atom
             (call-next-method)))
-  (:method list ((actor actor)) 'command))
+  (:method list ((actor actor)) '(command death)))
 
 ;;; from scalpl.util ; TODO: #.(if (find-package :scalpl.util) ...)
 (defun strftime (&optional datep &aux bits)
@@ -50,29 +61,30 @@
         (when datep (collect " " next "-" next)))))
   (apply 'concatenate 'string bits))
 
-(defgeneric christen (actor type)
-  (:method ((actor actor) (type (eql 'actor))) (strftime t))
-  (:method ((actor actor) (type (eql 'task)))
+(defgeneric christen (actor)
+  (:method ((actor actor))
     (with-slots (name abbrev) actor (format nil "~A~@[ ~A~]" name abbrev)))
-  (:method :around ((actor actor) (type (eql 'task)))
+  (:method :around ((actor actor))
     (concatenate 'string (strftime) " " (call-next-method))))
 
 (defmethod slot-unbound ((class t) (actor actor) (slot-name (eql 'name)))
-  (setf (slot-value actor 'name) (christen actor 'actor)))
+  (setf (slot-value actor 'name) (strftime t)))
 
 (defmethod print-object ((actor actor) stream)
   (print-unreadable-object (actor stream :type t :identity t)
     (write-string (name actor) stream)))
 
-(defmacro define-delegated-slot-operation (operation return)
-  `(defmethod slot-missing ((class t) (actor actor) slot-name
-                            (operation (eql ',operation)) &optional new-value)
-     (declare (ignore new-value))       ; a sufficiently smart compiler...
-     (if (and (slot-boundp actor 'boss) (slot-boundp (boss actor) slot-name))
-         ,return (call-next-method))))
-(define-delegated-slot-operation slot-value (slot-value (boss actor) slot-name))
+(macrolet ((delegate-slot-operation (op return) ;P
+             `(defmethod slot-missing ((class t) (actor actor) slot
+                                       (op (eql ',op)) &optional new-value)
+                (declare (ignore new-value)) ; a sufficiently smart compiler...
+                (with-slots (boss) actor
+                  (if (and (typep boss 'actor) (slot-boundp boss slot))
+                      ,return (call-next-method))))))
+  (delegate-slot-operation slot-value (slot-value boss slot))
+  (delegate-slot-operation slot-boundp t))
 
-(define-method-combination select (&optional (sleep 1))
+(define-method-combination select (&optional (sleep 1/7))
   ((select *)) (:arguments actor)
   (let (before after around recv send default)
     (dolist (method select)
@@ -110,34 +122,30 @@
 
 (defgeneric execute (actor command)
   (:method ((actor actor) (command function)) (funcall command actor))
-  (:method ((actor actor) (command (eql :halt))) (throw :halt actor)))
+  (:method ((actor actor) (command (eql :die))) (throw :die (current-thread))))
 
 (defun launch (actor)
   (bt:make-thread (lambda ()
-                    (catch :halt
+                    (catch :die
                       (loop (funcall (slot-value actor 'state) actor))))
-                  :name (christen actor 'task)))
+                  :name (christen actor)))
 
 (defgeneric ensure-running (actor)
   (:method ((actor actor))
     (with-slots (boss) actor
-      (if (not (slot-boundp actor 'boss)) (setf boss (launch actor))
-          (typecase boss
-            (bt:thread
-             (cond ((eq boss (bt:current-thread))
-                    (warn "~A tried to revive itself" actor))
-                   ((bt:thread-alive-p boss)
-                    (warn "~A revived before death" actor))
-                   (t (warn "races ahoy!") (setf boss (launch actor)))))
-            (boss (send (slot-channel boss 'to-run) actor)))))))
+      (symbol-macrolet ((launch (setf boss (launch actor))))
+        (typecase boss
+          (null launch)
+          (bt:thread (cond ((eq boss (bt:current-thread)) ; nop
+                            (warn "~A tried to revive itself" actor))
+                           ((bt:thread-alive-p boss) ; nop
+                            (warn "~A revived before death" actor))
+                           (t (warn "races ahoy!") launch)))
+          (boss (send (slot-channel boss 'to-run) actor)))))))
 
 (defgeneric act (class &key)
   (:method ((class symbol) &rest initargs) ; :metaclass actor-class
     (ensure-running (apply #'make-instance class initargs))))
-
-(defgeneric halt (actor)                ; TODO: blocking? timeouts? kill?
-  (:documentation "Signals `actor' to terminate")
-  (:method ((actor actor)) (send (slot-channel actor 'command) :halt)))
 
 (defmethod initialize-instance :before ((actor actor) &key)
   (setf (slot-value actor 'tubes) (compute-tubes actor)))
@@ -155,19 +163,32 @@
    (to-halt :documentation "Actor to halt, but keep its link")
    (to-fire :documentation "Actor to both halt and unlink")))
 
-(defmethod compute-tubes list ((boss boss)) '(to-run to-halt to-fire))
+(defmethod compute-tubes list ((boss boss))
+  '((to-run unbounded-channel) to-halt to-fire))
 
-(define-delegated-slot-operation slot-boundp t)
+(defvar *boss*
+  (make-instance 'boss :name "atp" :boss
+                 (prog1 (bt:make-thread #'list) (sleep 3)))) ; bootstrap!
 
 (defun map-workers (boss function)   ; ... i'm not sure what i expected
   (mapcar function (mapcar #'car (slot-value boss 'workers))))
 
 (defmethod ensure-running :after ((boss boss))
-  (unless (eq (bt:current-thread) (boss boss))
-    (send (slot-channel boss 'command)
-          (lambda (boss) (map-workers boss #'ensure-running)))))
+  (map-workers boss #'ensure-running))
 
-(defmethod halt :before ((boss boss)) (map-workers boss #'halt))
+(defun %kill (actor) (send (slot-channel actor 'command) :die))
+
+(defgeneric die (actor)                 ; TODO: blocking? timeouts?
+  (:documentation "Signals `actor' to terminate")
+  (:method :before ((boss boss)) (map-workers boss #'halt))
+  (:method ((actor actor)) (%kill actor)))
+
+(defun halt (actor)
+  (typecase (boss actor)
+    (bt:thread (die actor))
+    (boss (send (slot-channel (boss actor) 'to-halt) actor))))
+
+(defun fire (actor) (send (slot-channel (boss actor) 'to-fire) actor))
 
 (defmethod perform recv to-run ((boss boss))
   (with-slots (to-run workers) boss
@@ -183,12 +204,12 @@
     (if (eq boss to-halt) (warn "~A told to halt itself" boss)
         (let ((link (assoc to-halt workers))) ; makes an ass out of you and me
           (declare (type (or null (cons actor bt:thread)) link))
-          (and link (bt:thread-alive-p (cdr link)) (halt to-halt))))))
+          (and link (bt:thread-alive-p (cdr link)) (%kill to-halt))))))
 
 (defmethod perform recv to-fire ((boss boss))
   (with-slots (to-fire workers) boss    ; FIXME: pater, pater everywhere, but...
     (if (eq boss to-fire) (warn "~A told to fire itself" boss)
         (let ((link (assoc to-fire workers))) ; this isn't even funny anymore
           (declare (type (or null (cons actor bt:thread)) link))
-          (and link (or (not (bt:thread-alive-p (cdr link))) (halt to-fire))
+          (and link (or (not (bt:thread-alive-p (cdr link))) (%kill to-fire))
                (setf workers (remove link workers)))))))
