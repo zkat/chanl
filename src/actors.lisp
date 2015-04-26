@@ -10,7 +10,8 @@
 (defpackage #:chanl.actors
   (:use #:cl #:chanl) (:import-from #:chanl #:ensure-list)
   (:export #:actor #:perform #:halt #:name #:slot-channel #:compute-tubes
-           #:execute #:command #:abbrev #:state #:ensure-running #:boss #:die))
+           #:execute #:command #:abbrev #:state
+           #:ensure-running #:boss #:die #:fire))
 
 (in-package #:chanl.actors)
 
@@ -178,14 +179,12 @@ Methods should return a list of specifications (or a single one as an atom)")
 
 (defun %kill (actor) (send (slot-channel actor 'command) :die))
 
-(defgeneric die (actor)                 ; TODO: blocking? timeouts?
-  (:documentation "Signals `actor' to terminate")
-  (:method :before ((boss boss)) (map-workers boss #'halt))
-  (:method ((actor actor)) (%kill actor)))
+(defmethod execute :before ((boss boss) (command (eql :die)))
+  (map-workers boss #'%kill))
 
 (defun halt (actor)
   (typecase (boss actor)
-    (bt:thread (die actor))
+    (bt:thread (%kill actor))
     (boss (send (slot-channel (boss actor) 'to-halt) actor))))
 
 (defun fire (actor) (send (slot-channel (boss actor) 'to-fire) actor))
