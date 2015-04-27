@@ -58,6 +58,30 @@
                    '(#1=(,class-name) #1# #1#)))
          (setf (find-class ',class-name) ()))))
 
+(test actors-unsanity
+  #.(let ((class-name (gensym "actor")))
+      `(progn
+         (defclass ,class-name (actor)
+           ((in :initarg :in) input (out :initarg :out) output))
+         (defmethod compute-tubes list ((actor ,class-name))
+           '((input :from in) (output :to out)))
+         (defmethod perform recv input ((actor ,class-name))
+           (setf (slot-value actor 'output) (slot-value actor 'input)))
+         (defmethod perform send output ((actor ,class-name)))
+         (let* ((bread (gensym "crumb"))
+                (in (make-instance 'channel))
+                (out (make-instance 'channel))
+                (actor (make-instance ',class-name :in in :out out)))
+           (is (eq in (send in bread)))
+           (is (eq bread (recv out)))
+           (fire actor))
+         (flet ((remmethod (genfun quals specs)
+                  (remove-method genfun (find-method genfun quals specs))))
+           (mapcar #'remmethod (list #'perform #'perform #'compute-tubes)
+                   '((send output) (recv input) (list))
+                   '(#1=(,class-name) #1# #1#)))
+         (setf (find-class ',class-name) ()))))
+
 (def-suite bossing :in actors)
 (in-suite bossing)
 

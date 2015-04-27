@@ -44,7 +44,7 @@ Methods should return a list of specifications (or a single one as an atom)")
               (mapcar (lambda (tube)
                         (destructuring-bind (name . spec) (ensure-list tube)
                           (cons name    ; ( data-slot :from channel-slot )
-                                (if (member (car spec)'(:to :from)) (cadr spec)
+                                (if (member (car spec) '(:to :from)) (cadr spec)
                                     (apply #'make-instance
                                            (or spec '(channel)))))))
                       (ensure-list tubing))) ; in case a method returns an atom
@@ -129,7 +129,9 @@ Methods should return a list of specifications (or a single one as an atom)")
   (bt:make-thread (lambda ()
                     (catch :die
                       (loop (funcall (slot-value actor 'state) actor))))
-                  :name (christen actor)))
+                  :name (christen actor)
+                  :initial-bindings (typecase (boss actor)
+                                      (boss `((*boss* . ,(boss actor)))))))
 
 (defgeneric ensure-running (actor)
   (:method ((actor actor))
