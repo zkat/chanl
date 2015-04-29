@@ -10,8 +10,8 @@
 (defpackage #:chanl.actors
   (:use #:cl #:chanl) (:import-from #:chanl #:ensure-list)
   (:export #:actor #:perform #:halt #:name #:slot-channel #:compute-tubes
-           #:execute #:command #:abbrev #:state
-           #:ensure-running #:boss #:die #:fire))
+           #:execute #:command #:abbrev #:state #:christen
+           #:ensure-running #:boss #:fire))
 
 (in-package #:chanl.actors)
 
