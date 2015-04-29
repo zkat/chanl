@@ -62,7 +62,8 @@
   #.(let ((class-name (gensym "actor")))
       `(progn
          (defclass ,class-name (actor)
-           ((in :initarg :in) input (out :initarg :out) output))
+           ((in :initarg :in) input (out :initarg :out)
+            (output :initform ())))     ; slot-boundp as default guard?
          (defmethod compute-tubes list ((actor ,class-name))
            '((input :from in) (output :to out)))
          (defmethod perform recv input ((actor ,class-name))
