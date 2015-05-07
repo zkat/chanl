@@ -11,11 +11,11 @@
   (:use #:cl #:chanl) (:import-from #:chanl #:ensure-list)
   (:export #:actor #:perform #:halt #:name #:slot-channel #:compute-tubes
            #:execute #:command #:abbrev #:state #:christen
-           #:ensure-running #:boss #:fire))
+           #:ensure-running #:boss #:*boss* #:fire))
 
 (in-package #:chanl.actors)
 
-(defvar *boss*)
+(defvar *boss* ())                      ; lazy boss, lazy hoss
 
 ;;; TODO: factor all this apart (delegates -> sheeple? merge into bossing?)
 (defclass actor ()
@@ -26,7 +26,7 @@
    (state :initform 'perform :documentation "Represents/performs actor's state")
    (tubes :documentation "Channels used for communication")
    (boss :documentation "For whom['s benefit] the bell tolls" :reader boss
-         :initform *boss* :initarg :boss :type (or bt:thread boss))
+         :initform *boss* :initarg :boss :type (or null bt:thread boss))
    (command :documentation "Command being executed by the actor")))
 
 (defun slot-channel (actor slot)
@@ -129,9 +129,9 @@ Methods should return a list of specifications (or a single one as an atom)")
   (bt:make-thread (lambda ()
                     (catch :die
                       (loop (funcall (slot-value actor 'state) actor))))
-                  :name (christen actor)
-                  :initial-bindings (typecase (boss actor)
-                                      (boss `((*boss* . ,(boss actor)))))))
+                  :name (christen actor) :initial-bindings
+                  `((*boss* . ,(if (typep (boss actor) 'boss)
+                                   (boss actor) actor)))))
 
 (defgeneric ensure-running (actor)
   (:method ((actor actor))
@@ -169,10 +169,6 @@ Methods should return a list of specifications (or a single one as an atom)")
 (defmethod compute-tubes list ((boss boss))
   '((to-run unbounded-channel) to-halt to-fire))
 
-(defvar *boss*
-  (make-instance 'boss :name "atp" :boss
-                 (prog1 (bt:make-thread #'list) (sleep 3)))) ; bootstrap!
-
 (defun map-workers (boss function)   ; ... i'm not sure what i expected
   (mapcar function (mapcar #'car (slot-value boss 'workers))))
 
@@ -189,7 +185,10 @@ Methods should return a list of specifications (or a single one as an atom)")
     (bt:thread (%kill actor))
     (boss (send (slot-channel (boss actor) 'to-halt) actor))))
 
-(defun fire (actor) (send (slot-channel (boss actor) 'to-fire) actor))
+(defun fire (actor)
+  (typecase (boss actor)
+    (bt:thread (%kill actor))
+    (boss (send (slot-channel (boss actor) 'to-fire) actor))))
 
 (defmethod perform recv to-run ((boss boss))
   (with-slots (to-run workers) boss
