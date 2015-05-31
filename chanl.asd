@@ -8,7 +8,7 @@
 
 (asdf:defsystem chanl
   :name "chanl"
-  :maintainer "Kat Marchan"
+  :maintainer "Adlai Chandrasekhar"
   :author "Kat Marchan"
   :description "Communicating Sequential Process support for Common Lisp"
   :depends-on (:bordeaux-threads)
@@ -42,6 +42,8 @@
 
 (asdf:defsystem chanl.tests
   :name "chanl tests"
+  :maintainer "Adlai Chandrasekhar"
+  :author "Kat Marchan"
   :description "Unit Tests for the ChanL library and its examples"
   :depends-on (:chanl :fiveam)
   :serial t
@@ -49,7 +51,6 @@
   ((:module "tests"
             :serial t
             :components ((:file "setup-tests")
-                         (:file "threads")
                          (:file "queues")
                          (:file "channels")
                          (:file "select")
