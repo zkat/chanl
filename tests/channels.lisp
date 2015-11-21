@@ -172,3 +172,40 @@
         (recv channels)
       (is (eq 'test value))
       (is (eq (elt channels 1) rec-chan)))))
+
+(defun setup-race (thread-count &optional (class 'channel) &rest channel-args)
+  (let ((lock (bt:make-lock "bt:semaphore")) (nrx 0) (ntx 0) start
+        (channel (apply #'make-instance class channel-args)))
+    (macrolet ((with-counter ((place) &body body)
+                 `(unwind-protect
+                       (progn (bt:with-lock-held (lock) (incf ,place)) ,@body)
+                    (bt:with-lock-held (lock) (decf ,place))))
+               (await (place) `(loop :until (= ,place thread-count))))
+      (flet ((recver () (with-counter (nrx) (recv channel)))
+             (sender (x)
+               (lambda ()
+                 (with-counter (ntx)
+                   (loop :until start :do (bt:thread-yield))
+                   (send channel x))))
+             (strcat (&rest things) (format () "~{~A~}" things)))
+        (let ((threads (loop :for n :below thread-count
+                          :collect (bt:make-thread #'recver :name (strcat "r" n))
+                          :collect (bt:make-thread (sender n) :name (strcat "s" n)))))
+          (await nrx) (await ntx) (setf start t)
+          threads)))))
+
+(test racing
+  (macrolet ((test-case (count)
+               `(let* ((threads (setup-race ,count)) pass
+                       (task (pexec () (mapc #'bt:join-thread threads) (setf pass t))))
+                  (sleep 5) (is (eq pass t) ,(format () "count=~D, unbuffered" count))
+                  (unless pass
+                    (mapc #'bt:destroy-thread threads) (kill (task-thread task))))))
+    (test-case 3) (test-case 6) (test-case 10))
+  (macrolet ((test-case (count)
+               `(let* ((threads (setup-race ,count 'unbounded-channel)) pass
+                       (task (pexec () (mapc #'bt:join-thread threads) (setf pass t))))
+                  (sleep 5) (is (eq pass t) ,(format () "count=~D, unbounded" count))
+                  (unless pass
+                    (mapc #'bt:destroy-thread threads) (kill (task-thread task))))))
+    (test-case 3) (test-case 6) (test-case 10)))
