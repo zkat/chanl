@@ -17,7 +17,7 @@
   (:method ((channel abstract-channel)) t))
 
 (defgeneric send (chan value &key)
-  (:method ((channels null) value &key) (warn "Ignored SEND to empty list"))
+  (:method ((channels null) (value t) &key) (warn "Ignored SEND to empty list"))
   (:method ((channels sequence) value &key (blockp t))
     (loop do (mapc (fun (when (send _ value :blockp nil) (return _)))
                    channels)
