@@ -23,16 +23,3 @@
 
 (in-suite chanl)
 
-;;; Hooking into ASDF
-(defmethod asdf:perform ((o asdf:test-op) (c (eql (asdf:find-system :chanl.tests))))
-  (format t "~2&*******************~@
-                ** Starting test **~@
-                *******************~%")
-  (handler-bind ((style-warning #'muffle-warning)) (run-all-tests))
-  (format t "~2&*****************************************~@
-                **            Tests finished           **~@
-                *****************************************~@
-                ** If there were any failures, please  **~@
-                **      file a bugreport on github:    **~@
-                **     github.com/zkat/chanl/issues    **~@
-                *****************************************~%"))

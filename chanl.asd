@@ -6,12 +6,12 @@
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(asdf:defsystem chanl
+(defsystem "chanl"
   :name "chanl"
   :maintainer "Adlai Chandrasekhar"
   :author "Kat Marchan"
   :description "Communicating Sequential Process support for Common Lisp"
-  :depends-on (:bordeaux-threads)
+  :depends-on ("bordeaux-threads")
   :components
   ((:module "src"
             :serial t
@@ -22,14 +22,15 @@
                          (:file "queues")
                          (:file "channels")
                          (:file "select")
-                         (:file "actors")))))
+                         (:file "actors"))))
+  :in-order-to ((test-op (test-op "chanl/tests"))))
 
-(asdf:defsystem chanl.examples
+(defsystem "chanl/examples"
   :name "chanl examples"
   :maintainer "Adlai Chandrasekhar"
   :author "Kat Marchan"
   :description "Examples of how to use chanl"
-  :depends-on (:chanl)
+  :depends-on ("chanl")
   :serial t
   :components
   ((:module "examples"
@@ -40,12 +41,12 @@
                          (:file "sieve")
                          (:file "futures")))))
 
-(asdf:defsystem chanl.tests
+(defsystem "chanl/tests"
   :name "chanl tests"
   :maintainer "Adlai Chandrasekhar"
   :author "Kat Marchan"
   :description "Unit Tests for the ChanL library and its examples"
-  :depends-on (:chanl :fiveam)
+  :depends-on ("chanl" "fiveam")
   :serial t
   :components
   ((:module "tests"
@@ -54,11 +55,18 @@
                          (:file "queues")
                          (:file "channels")
                          (:file "select")
-                         (:file "actors")))))
-
-(defmethod asdf:perform ((op asdf:test-op) (system (eql (asdf:find-system :chanl))))
-  (format t "~2&*******************~@
-                ** Loading tests **~@
-                *******************~%")
-  (asdf:oos 'asdf:load-op :chanl.tests)
-  (asdf:oos 'asdf:test-op :chanl.tests))
+                         (:file "actors"))))
+  :perform
+  (test-op (o c)
+    (format t "~2&*******************~@
+                  ** Starting test **~@
+                  *******************~%")
+    (handler-bind ((style-warning #'muffle-warning))
+      (symbol-call :chanl :run-all-tests))
+    (format t "~2&*****************************************~@
+                  **            Tests finished           **~@
+                  *****************************************~@
+                  ** If there were any failures, please  **~@
+                  **      file a bugreport on github:    **~@
+                  **     github.com/zkat/chanl/issues    **~@
+                  *****************************************~%")))
