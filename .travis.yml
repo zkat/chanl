@@ -23,4 +23,4 @@ cache:
     - $HOME/.config/common-lisp
 
 script:
-  - ros -e '(progn (ql:quickload :chanl.tests) (asdf:test-system :chanl))'
+  - ros -e '(progn (ql:quickload "chanl/tests") (asdf:test-system "chanl"))'
