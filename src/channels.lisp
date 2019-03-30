@@ -65,7 +65,7 @@ blocking (if it would block)"))
 (defun channel-being-written-p (channel)
   (plusp (channel-writers channel)))
 
-;;; Hackish Semaphores
+;;; Semaphores that delegate locking to the calling context
 (macrolet ((define-channel-state-macro (name place)
              `(defmacro ,name (channel &body body)
                 `(unwind-protect (progn (incf (,',place ,channel)) ,@body)
@@ -104,9 +104,9 @@ blocking (if it would block)"))
     (not (and (channel-being-read-p channel)
               (eq (channel-value channel)
                   *secret-unbound-value*))))
-  (:documentation "Returns T if trying to SEND to CHANNEL would block. Note that this is not an
-atomic operation, and should not be relied on in production. It's mostly meant for
-interactive/debugging purposes."))
+  (:documentation "Returns T if trying to SEND to CHANNEL would block.
+
+Assumes that the calling context holds the channel's lock."))
 
 ;;; Receiving
 (defmethod recv ((channel channel) &key (blockp t))
@@ -127,7 +127,10 @@ interactive/debugging purposes."))
 
 (defgeneric recv-blocks-p (channel)
   (:method ((channel channel))
-    (eq *secret-unbound-value* (channel-value channel))))
+    (eq *secret-unbound-value* (channel-value channel)))
+  (:documentation "Returns T if trying to RECV from CHANNEL would block.
+
+Assumes that the calling context holds the channel's lock."))
 
 (defgeneric channel-grab-value (channel)
   (:method ((channel channel))
@@ -145,10 +148,12 @@ interactive/debugging purposes."))
 
 (defgeneric channel-peek (channel)
   (:documentation
-   "Peek at the next value CHANNEL would dequeue. Note that this cannot
-be used atomically. Returns two values: The first is the value of interest
-or NIL, the second is a generalized boolean that is NIL when there is no
-available value in the queue."))
+   "Peek at a possible next value CHANNEL would dequeue. An actual call to RECV
+may return a different value, if the previously-peeked one has been received by
+a different thread in the meantime.
+
+Returns two values: the value of interest or NIL, and a generalized boolean that
+is NIL when there is no available value in the queue."))
 
 ;;;
 ;;; Stack-buffered channels
