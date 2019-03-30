@@ -173,7 +173,10 @@
       (is (eq 'test value))
       (is (eq (elt channels 1) rec-chan)))))
 
-(defun setup-race (thread-count &optional (class 'channel) &rest channel-args)
+(def-suite racing :in channels)
+(in-suite racing)
+
+(defun setup-race (thread-count class &rest channel-args)
   (let ((lock (bt:make-lock "bt:semaphore")) (nrx 0) (ntx 0) start
         (channel (apply #'make-instance class channel-args)))
     (macrolet ((with-counter ((place) &body body)
@@ -192,20 +195,33 @@
                           :collect (bt:make-thread #'recver :name (strcat "r" n))
                           :collect (bt:make-thread (sender n) :name (strcat "s" n)))))
           (await nrx) (await ntx) (setf start t)
-          threads)))))
+          (values threads channel))))))
 
 (test racing
-  (macrolet ((test-case (count)
-               `(let* ((threads (setup-race ,count)) pass
-                       (task (pexec () (mapc #'bt:join-thread threads) (setf pass t))))
-                  (sleep 5) (is (eq pass t) ,(format () "count=~D, unbuffered" count))
-                  (unless pass
-                    (mapc #'bt:destroy-thread threads) (kill (task-thread task))))))
-    (test-case 3) (test-case 6) (test-case 10))
-  (macrolet ((test-case (count)
-               `(let* ((threads (setup-race ,count 'unbounded-channel)) pass
-                       (task (pexec () (mapc #'bt:join-thread threads) (setf pass t))))
-                  (sleep 5) (is (eq pass t) ,(format () "count=~D, unbounded" count))
-                  (unless pass
-                    (mapc #'bt:destroy-thread threads) (kill (task-thread task))))))
-    (test-case 3) (test-case 6) (test-case 10)))
+  (macrolet ((test-case (class count kind)
+               `(multiple-value-bind (threads channel) (setup-race ,count ',class)
+                  (let* ((pass nil)
+                         (verifier (pexec ()
+                                     (mapc #'bt:join-thread threads)
+                                     (setf pass t))))
+                    (sleep 5) (is (eq pass t)
+                                  (concatenate
+                                   'string ,(format () "count=~D, ~A" count kind)
+                                   (with-output-to-string (*standard-output*)
+                                     (format t "~%~%Contested Channel:~%")
+                                     (describe channel)
+                                     (format t "~%~%Competing Threads:~%")
+                                     (mapc 'describe
+                                           (remove () threads
+                                                   :key #'bt:thread-alive-p)))))
+                    (unless pass
+                      (mapc #'bt:destroy-thread
+                            (remove () threads
+                                    :key #'bt:thread-alive-p))
+                      (kill (task-thread verifier)))))))
+    (test-case channel 3 "unbuffered")
+    (test-case channel 6 "unbuffered")
+    (test-case channel 10 "unbuffered")
+    (test-case unbounded-channel 3 "unbounded")
+    (test-case unbounded-channel 6 "unbounded")
+    (test-case unbounded-channel 10 "unbounded")))
