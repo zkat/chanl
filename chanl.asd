@@ -22,7 +22,7 @@
                          (:file "queues")
                          (:file "channels")
                          (:file "select")
-                         (:file "actors"))))
+                         #-ecl (:file "actors"))))
   :in-order-to ((test-op (test-op "chanl/tests"))))
 
 (defsystem "chanl/examples"
@@ -55,7 +55,7 @@
                          (:file "queues")
                          (:file "channels")
                          (:file "select")
-                         (:file "actors"))))
+                         #-ecl (:file "actors"))))
   :perform
   (test-op (o c)
     (format t "~2&*******************~@
