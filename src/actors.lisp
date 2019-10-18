@@ -121,8 +121,8 @@ Methods should return a list of specifications (or a single one as an atom)")
                           (,@(rest around) (make-method ,form))))))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (warn 'style-warning :report
-        "CAVEAT FIDICINE: #'CHANL.ACTORS:PERFORM specializes non-portably."))
+  (format *error-output*         ; It takes a tough man to eat a tougher chicken
+          "CAVEAT FIDICINE: #'CHANL.ACTORS:PERFORM specializes non-portably."))
 
 #-ecl
 (defgeneric perform (actor &key)
