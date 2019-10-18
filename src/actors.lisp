@@ -85,6 +85,11 @@ Methods should return a list of specifications (or a single one as an atom)")
   (delegate-slot-operation slot-value (slot-value boss slot))
   (delegate-slot-operation slot-boundp t))
 
+#-ecl
+;;; The sufficiently embeddable distribution should compute-applicable-methods
+;;; across the inheritance forest rooted at the actor class; until then, this
+;;; method-combination eludes embedding, although the practical case where this
+;;;   ''        ''     appears in the library can be faked using the standard.
 (define-method-combination select (&optional (sleep 1/7))
   ((select *)) (:arguments actor)
   (let (before after around recv send default)
@@ -115,11 +120,29 @@ Methods should return a list of specifications (or a single one as an atom)")
             `(call-method ,(first around)
                           (,@(rest around) (make-method ,form))))))))
 
+#-ecl
 (defgeneric perform (actor)
   (:documentation "Implement actor's behavior, executing commands by default")
   (:method-combination select)
   (:method recv command ((actor actor))
     (execute actor (slot-value actor 'command))))
+
+;; #+ecl
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (warn "CAVEAT FIDICINE: #'CHANL.ACTORS:PERFORM specializes non-portably."))
+;; #+ecl
+(defgeneric perform (actor)
+  (:documentation "Implement actor's behavior, executing commands by default")
+  (:method :before ((actor actor))
+    (with-slots (tasks) actor
+      (setf tasks (remove :terminated tasks :key #'task-status))))
+  (:method ((actor actor))
+    (awhen (recv (control actor)) (execute actor it)))
+  (:method :around ((actor actor))
+    (restart-case (call-next-method)
+      (abort () :report "Abort request, restart actor")))
+  (:method :after ((actor actor))
+    (push (enqueue actor) (slot-value actor 'tasks))))
 
 (defgeneric execute (actor command)
   (:method ((actor actor) (command function)) (funcall command actor))
