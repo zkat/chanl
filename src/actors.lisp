@@ -120,28 +120,29 @@ Methods should return a list of specifications (or a single one as an atom)")
             `(call-method ,(first around)
                           (,@(rest around) (make-method ,form))))))))
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (warn 'style-warning :report
+        "CAVEAT FIDICINE: #'CHANL.ACTORS:PERFORM specializes non-portably."))
+
 #-ecl
-(defgeneric perform (actor)
+(defgeneric perform (actor &key)
   (:documentation "Implement actor's behavior, executing commands by default")
   (:method-combination select)
-  (:method recv command ((actor actor))
+  (:method recv command ((actor actor) &key)
     (execute actor (slot-value actor 'command))))
 
-;; #+ecl
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (warn "CAVEAT FIDICINE: #'CHANL.ACTORS:PERFORM specializes non-portably."))
-;; #+ecl
-(defgeneric perform (actor)
+#+ecl
+(defgeneric perform (actor &key)
   (:documentation "Implement actor's behavior, executing commands by default")
-  (:method :before ((actor actor))
+  (:method :before ((actor actor) &key)
     (with-slots (tasks) actor
       (setf tasks (remove :terminated tasks :key #'task-status))))
-  (:method ((actor actor))
+  (:method ((actor actor) &key)
     (awhen (recv (control actor)) (execute actor it)))
-  (:method :around ((actor actor))
+  (:method :around ((actor actor) &key)
     (restart-case (call-next-method)
       (abort () :report "Abort request, restart actor")))
-  (:method :after ((actor actor))
+  (:method :after ((actor actor) &key)
     (push (enqueue actor) (slot-value actor 'tasks))))
 
 (defgeneric execute (actor command)
@@ -213,7 +214,7 @@ Methods should return a list of specifications (or a single one as an atom)")
     (bt:thread (%kill actor))
     (boss (send (slot-channel (boss actor) 'to-fire) actor))))
 
-(defmethod perform recv to-run ((boss boss))
+(defmethod perform recv to-run ((boss boss) &key)
   (with-slots (to-run workers) boss
     (if (eq boss to-run) (warn "~A told to boss itself" boss)
         (let ((link (assoc to-run workers))) ; assumes there's only one link
@@ -222,14 +223,14 @@ Methods should return a list of specifications (or a single one as an atom)")
                 ((bt:thread-alive-p (cdr link))) ; nothing to see here
                 (t (rplacd link (launch to-run)))))))) ; re-launch the worker
 
-(defmethod perform recv to-halt ((boss boss))
+(defmethod perform recv to-halt ((boss boss) &key)
   (with-slots (to-halt workers) boss
     (if (eq boss to-halt) (warn "~A told to halt itself" boss)
         (let ((link (assoc to-halt workers))) ; makes an ass out of you and me
           (declare (type (or null (cons actor bt:thread)) link))
           (and link (bt:thread-alive-p (cdr link)) (%kill to-halt))))))
 
-(defmethod perform recv to-fire ((boss boss))
+(defmethod perform recv to-fire ((boss boss) &key)
   (with-slots (to-fire workers) boss    ; FIXME: pater, pater everywhere, but...
     (if (eq boss to-fire) (warn "~A told to fire itself" boss)
         (let ((link (assoc to-fire workers))) ; this isn't even funny anymore
