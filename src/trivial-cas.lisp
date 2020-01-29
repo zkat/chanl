@@ -8,6 +8,14 @@
 ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+#+ sbcl
+(eval-when (:load-toplevel :compile-toplevel :execute)
+  (let ((package (find-package :sb-impl)))
+    (when package
+      (let ((sym (find-symbol (string :+internal-features+) package)))
+        (when (and (boundp sym) (member :compare-and-swap-vops (symbol-value sym)))
+          (pushnew :compare-and-swap-vops *features*))))))
+
 (defpackage :trivial-compare-and-swap
   (:use :cl)
   (:nicknames :trivial-cas)
