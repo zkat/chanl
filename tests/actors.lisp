@@ -34,9 +34,9 @@
       `(progn
          (defclass ,class-name (actor) (input (output :initform ())))
          (defmethod compute-tubes list ((actor ,class-name)) '(input output))
-         (defmethod perform recv input ((actor ,class-name))
+         (defmethod perform recv input ((actor ,class-name) &key)
            (setf (slot-value actor 'output) (slot-value actor 'input)))
-         (defmethod perform send output ((actor ,class-name)))
+         (defmethod perform send output ((actor ,class-name) &key))
          (let ((actor (make-instance ',class-name)))
            (is (intersection '(command input output)
                              (mapcar 'car (slot-value actor 'tubes))))
@@ -66,9 +66,9 @@
             (output :initform ())))     ; slot-boundp as default guard?
          (defmethod compute-tubes list ((actor ,class-name))
            '((input :from in) (output :to out)))
-         (defmethod perform recv input ((actor ,class-name))
+         (defmethod perform recv input ((actor ,class-name) &key)
            (setf (slot-value actor 'output) (slot-value actor 'input)))
-         (defmethod perform send output ((actor ,class-name)))
+         (defmethod perform send output ((actor ,class-name) &key))
          (let* ((bread (gensym "crumb"))
                 (in (make-instance 'channel))
                 (out (make-instance 'channel))
