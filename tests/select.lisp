@@ -23,7 +23,7 @@
   (let ((channel (make-instance 'channel)))
     (select ((recv channel x) x (5am:fail "SELECT ran a blocking clause"))
             (otherwise (5am:pass)))
-    (pexec () (send channel (recv channel))) (send channel 'foo)
+    (pexec () (send channel (recv channel))) (send channel 'foo) (sleep 0.5)
     (select ((recv channel x y)
              (is (eq 'foo x) "SELECT didn't bind the RECVed value")
              (is (eq channel y) "SELECT didn't bind the recved-from chanl"))

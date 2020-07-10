@@ -89,7 +89,7 @@
 (test bossing-sanity
   (macrolet ((with-actor ((symbol &key (class 'actor) (name (gensym)) thread)
                           &body body)
-               `(let* ((,symbol (make-instance ',class))
+               `(let* ((,symbol (make-instance ',class :name ,name))
                        ,@(when thread `((,thread (divulge-thread ,symbol)))))
                   ,@body))
              (warns (warnspec (&optional test) &body body

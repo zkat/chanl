@@ -52,9 +52,9 @@ blocking (if it would block)"))
   ((value :initform *secret-unbound-value* :accessor channel-value)
    (readers :initform 0 :accessor channel-readers)
    (writers :initform 0 :accessor channel-writers)
-   (lock :initform (bt:make-recursive-lock) :accessor channel-lock)
-   (send-ok :initform (bt:make-condition-variable) :accessor channel-send-ok)
-   (recv-ok :initform (bt:make-condition-variable) :accessor channel-recv-ok)
+   (lock :initform (bt:make-recursive-lock))
+   (send-ok :initform (bt:make-condition-variable))
+   (recv-ok :initform (bt:make-condition-variable))
    (send-return-wait :initform (bt:make-condition-variable)
                      :accessor channel-send-return-wait)
    (recv-grabbed-value-p :initform nil :accessor recv-grabbed-value-p)))
@@ -75,25 +75,29 @@ blocking (if it would block)"))
   (define-channel-state-macro with-write-state channel-writers)
   (define-channel-state-macro with-read-state channel-readers))
 
+(defmacro with-channel-slots ((lock recv-ok send-ok) channel &body body)
+  `(with-slots ((,lock lock) (,recv-ok recv-ok) (,send-ok send-ok)) ,channel
+     (bt:with-recursive-lock-held (,lock) ,@body)))
+
 ;;; Sending
 (defmethod send ((channel channel) value &key (blockp t))
-  (with-accessors ((lock channel-lock)
-                   (recv-ok channel-recv-ok))
-      channel
-    (bt:with-recursive-lock-held (lock)
-      (with-write-state channel
-        (loop while (send-blocks-p channel)
-           if (or blockp (channel-being-read-p channel))
-           do (bt:condition-wait (channel-send-ok channel) lock)
-           else do (return-from send nil)))
-      (bt:condition-notify recv-ok)
-      (let ((block-status (channel-being-read-p channel)))
-        (channel-insert-value channel value)
-        (when block-status
-          (loop until (recv-grabbed-value-p channel)
-             do (bt:condition-wait (channel-send-return-wait channel) lock)
-             finally (setf (recv-grabbed-value-p channel) nil))))
-      channel)))
+  (with-channel-slots (lock recv-ok send-ok) channel
+    (with-write-state channel
+      (loop while (send-blocks-p channel)
+         do (if (or blockp (channel-being-read-p channel))
+                (bt:condition-wait send-ok lock)
+                (return-from send nil))))
+    (bt:condition-notify recv-ok)
+    (let ((block-status (channel-being-read-p channel)))
+      (channel-insert-value channel value)
+      (when (and block-status (send-blocks-p channel))
+        (loop until (recv-grabbed-value-p channel)
+           do (bt:condition-wait (channel-send-return-wait channel) lock)
+           finally (setf (recv-grabbed-value-p channel) nil))))
+    (when (and (channel-being-read-p channel)
+               (channel-being-written-p channel))
+      (bt:condition-notify recv-ok))
+    channel))
 
 (defgeneric channel-insert-value (channel value)
   (:method ((channel channel) value)
@@ -110,20 +114,17 @@ Assumes that the calling context holds the channel's lock."))
 
 ;;; Receiving
 (defmethod recv ((channel channel) &key (blockp t))
-  (with-accessors ((lock channel-lock)
-                   (send-ok channel-send-ok))
-      channel
-    (bt:with-recursive-lock-held (lock)
-      (with-read-state channel
-        (bt:condition-notify send-ok)
-        (loop while (recv-blocks-p channel)
-           do (if (or blockp (channel-being-written-p channel))
-                  (bt:condition-wait (channel-recv-ok channel) lock)
-                  (return-from recv (values nil nil))))
-        (multiple-value-prog1
-            (values (channel-grab-value channel) channel)
-          (setf (recv-grabbed-value-p channel) t)
-          (bt:condition-notify (channel-send-return-wait channel)))))))
+  (with-channel-slots (lock recv-ok send-ok) channel
+    (with-read-state channel
+      (loop while (recv-blocks-p channel)
+         do (bt:condition-notify send-ok)
+         do (if (or blockp (channel-being-written-p channel))
+                (bt:condition-wait recv-ok lock)
+                (return-from recv (values nil nil))))
+      (multiple-value-prog1
+          (values (channel-grab-value channel) channel)
+        (setf (recv-grabbed-value-p channel) t)
+        (bt:condition-notify (channel-send-return-wait channel))))))
 
 (defgeneric recv-blocks-p (channel)
   (:method ((channel channel))

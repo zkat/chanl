@@ -17,12 +17,7 @@
     (is (= 0 (channel-writers chan)))
     (is (eq *secret-unbound-value* (channel-value chan)))
     (is (send-blocks-p chan))
-    (is (recv-blocks-p chan))
-    ;; We don't really have predicates for these, but if they exist, we assume
-    ;; they're what they're suposed to be.
-    (is (channel-lock chan))
-    (is (channel-send-ok chan))
-    (is (channel-recv-ok chan))))
+    (is (recv-blocks-p chan))))
 
 #+ (or sbcl (and ccl (or x86 x86_64)))
 (test make-cas
@@ -43,12 +38,7 @@
     (is (= 0 (channel-readers chan)))
     (is (= 0 (channel-writers chan)))
     (is (not (send-blocks-p chan)))
-    (is (recv-blocks-p chan))
-    ;; We don't really have predicates for these, but if they exist, we assume
-    ;; they're what they're suposed to be.
-    (is (channel-lock chan))
-    (is (channel-send-ok chan))
-    (is (channel-recv-ok chan))))
+    (is (recv-blocks-p chan))))
 
 (test make-bounded
   (let ((chan (make-instance 'bounded-channel :size 10)))
@@ -59,12 +49,7 @@
     (is (= 0 (channel-readers chan)))
     (is (= 0 (channel-writers chan)))
     (is (not (send-blocks-p chan)))
-    (is (recv-blocks-p chan))
-    ;; We don't really have predicates for these, but if they exist, we assume
-    ;; they're what they're suposed to be.
-    (is (channel-lock chan))
-    (is (channel-send-ok chan))
-    (is (channel-recv-ok chan))))
+    (is (recv-blocks-p chan))))
 
 (test make-unbounded
   (let ((chan (make-instance 'unbounded-channel)))
@@ -74,12 +59,7 @@
     (is (= 0 (channel-readers chan)))
     (is (= 0 (channel-writers chan)))
     (is (not (send-blocks-p chan)))
-    (is (recv-blocks-p chan))
-    ;; We don't really have predicates for these, but if they exist, we assume
-    ;; they're what they're suposed to be.
-    (is (channel-lock chan))
-    (is (channel-send-ok chan))
-    (is (channel-recv-ok chan))))
+    (is (recv-blocks-p chan))))
 
 (test make-invalid
   (signals error (make-instance 'buffered-channel :size nil))
@@ -197,31 +177,30 @@
           (await nrx) (await ntx) (setf start t)
           (values threads channel))))))
 
-(test racing
-  (macrolet ((test-case (class count kind)
-               `(multiple-value-bind (threads channel) (setup-race ,count ',class)
-                  (let* ((pass nil)
-                         (verifier (pexec ()
-                                     (mapc #'bt:join-thread threads)
-                                     (setf pass t))))
-                    (sleep 5) (is (eq pass t)
-                                  (concatenate
-                                   'string ,(format () "count=~D, ~A" count kind)
-                                   (with-output-to-string (*standard-output*)
-                                     (format t "~%~%Contested Channel:~%")
-                                     (describe channel)
-                                     (format t "~%~%Competing Threads:~%")
-                                     (mapc 'describe
-                                           (remove () threads
-                                                   :key #'bt:thread-alive-p)))))
-                    (unless pass
-                      (mapc #'bt:destroy-thread
-                            (remove () threads
-                                    :key #'bt:thread-alive-p))
-                      (kill (task-thread verifier)))))))
-    (test-case channel 3 "unbuffered")
-    (test-case channel 6 "unbuffered")
-    (test-case channel 10 "unbuffered")
-    (test-case unbounded-channel 3 "unbounded")
-    (test-case unbounded-channel 6 "unbounded")
-    (test-case unbounded-channel 10 "unbounded")))
+(defmacro racing-test-cases (name class &rest counts)
+  `(test ,name
+     (dolist (count ',counts)
+       (multiple-value-bind (threads channel) (setup-race count ',class)
+         (let* ((pass nil)
+                (verifier (pexec ()
+                            (mapc #'bt:join-thread threads)
+                            (setf pass t))))
+           (sleep 1)
+           (is (eq pass t)
+               (concatenate
+                'string (format () "count=~D, ~A" count ',name)
+                (with-output-to-string (*standard-output*)
+                  (format t "~%~%Contested Channel:~%")
+                  (with-slots (lock) channel
+                    (mapc #'describe (list channel lock)))
+                  (format t "~%~%Competing Threads:~{~&~A~%~}"
+                          (remove-if-not #'bt:thread-alive-p threads)))))
+           (unless pass
+             (mapc #'bt:destroy-thread
+                   (remove-if-not #'bt:thread-alive-p threads))
+             (kill (task-thread verifier))))))))
+
+(racing-test-cases race-unbuffered channel 3 6 10 15 21)
+(racing-test-cases race-stack stack-channel 3 6 10 15 21)
+(racing-test-cases race-buffered bounded-channel 3 6 10 15 21)
+(racing-test-cases race-unbounded unbounded-channel 3 6 10 15 21)
