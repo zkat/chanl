@@ -24,16 +24,29 @@
     (select ((recv channel x) x (5am:fail "SELECT ran a blocking clause"))
             (otherwise (5am:pass)))
     (pexec () (send channel (recv channel))) (send channel 'foo) (sleep 0.5)
-    (select ((recv channel x y)
-             (is (eq 'foo x) "SELECT didn't bind the RECVed value")
-             (is (eq channel y) "SELECT didn't bind the recved-from chanl"))
-            (otherwise (5am:fail "SELECT didn't RECV when it could've")))))
+    (is (equal '(1 2 3)
+               (multiple-value-list
+                (select ((recv channel x y)
+                         (is (eq 'foo x)
+                             "SELECT didn't bind the RECVed value")
+                         (is (eq channel y)
+                             "SELECT didn't bind the recved-from chanl")
+                         (values 1 2 3))
+                        (otherwise
+                         (5am:fail "SELECT didn't RECV when it could've")))))
+        "SELECT didn't return the last form's values")))
 
 (test select-unbuffered-send
   (let ((channel (make-instance 'channel)))
     (select ((send channel t) (5am:fail "SELECT ran a blocking clause"))
             (otherwise (5am:pass)))
     (pexec () (recv channel)) (sleep 0.5)
-    (select ((send channel t x)
-             (is (eq channel x) "SELECT didn't bind the sent-to chanl"))
-            (otherwise (5am:fail "SELECT didn't SEND when it could've")))))
+    (is (equal '(1 2 3)
+               (multiple-value-list
+                (select ((send channel t x)
+                         (is (eq channel x)
+                             "SELECT didn't bind the sent-to chanl")
+                         (values 1 2 3))
+                        (otherwise
+                         (5am:fail "SELECT didn't SEND when it could've")))))
+        "SELECT didn't return the last form's values")))

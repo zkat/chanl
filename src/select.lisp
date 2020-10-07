@@ -20,25 +20,28 @@
 
 The syntax is:
 
-   select clause*
+   select clause*   ->  result(s)
    clause ::= (op form*)
-   op ::= (recv c &optional variable channel-var) | (send c value &optional channel-var)
+   op ::=   (recv c &optional variable channel-var)
+          | (send c value &optional channel-var)
           | else | otherwise | t
-   c ::= An evaluated form representing a channel, or a sequence of channels.
-   variable ::= an unevaluated symbol RECV's return value is to be bound to. Made available to form*.
-   value ::= An evaluated form representing a value to send into the channel.
+   c ::= an evaluated form representing a channel, or a sequence of channels.
+   variable ::= an unevaluated symbol, bound within form* to RECV's return value.
+   value ::= an evaluated form returning a value to send into the channel.
    channel-var ::= An unevaluated symbol that will be bound to the channel the SEND/RECV
                    operation succeeded on.
+   result(s) ::= the values returned by the last form in the selected clause.
 
-SELECT will first attempt to find a clause with a non-blocking op, and execute it. Execution of the
-check-if-blocks-and-do-it part is atomic, but execution of the clause's body once the SEND/RECV
-clause executes is NOT atomic. If all channel clauses would block, and no else clause is provided,
-SELECT will thrash-idle (an undesirable state!) until one of the clauses is available for execution.
+SELECT will first attempt to find a clause with a non-blocking op, and execute it.
+Selecting a clause to execute is atomic, but execution of the clause's body after
+the SEND/RECV clause executes is NOT atomic.  If all channel clauses would block,
+and no else clause is provided, SELECT will thrash-idle (an undesirable state!)
+until one of the clauses is available for execution.
 
-SELECT's non-determinism is, in fact, very non-deterministic. Clauses are chosen at random, not
-in the order they are written. It's worth noting that SEND/RECV, when used on sequences of
-channels, are still linear in the way they go through the sequence -- the random selection is
-reserved for individual SELECT clauses."
+SELECT's non-determinism is, in fact, very non-deterministic. Clauses are chosen at
+random, not in the order they are written. It's worth noting that SEND/RECV, when
+used on sequences of channels, are still linear in the way they go through the
+sequence -- the random selection is reserved for individual SELECT clauses."
   (unless (null clauses)
     (let* ((main-clauses (remove :else clauses :key 'clause-type))
            (else-clause (find :else clauses :key 'clause-type))
