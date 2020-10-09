@@ -20,8 +20,7 @@
                          (:file "threads")
                          (:file "queues")
                          (:file "channels")
-                         (:file "select")
-                         (:file "actors"))))
+                         (:file "select"))))
   :in-order-to ((test-op (test-op "chanl/tests"))))
 
 (defsystem "chanl/examples"
@@ -52,8 +51,7 @@
             :components ((:file "setup-tests")
                          (:file "queues")
                          (:file "channels")
-                         (:file "select")
-                         (:file "actors"))))
+                         (:file "select"))))
   :perform
   (test-op (o c)
     (format t "~2&*******************~@
