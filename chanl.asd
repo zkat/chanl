@@ -8,7 +8,6 @@
 
 (defsystem "chanl"
   :name "chanl"
-  :maintainer "Adlai Chandrasekhar"
   :author "Kat Marchan"
   :description "Communicating Sequential Process support for Common Lisp"
   :depends-on ("bordeaux-threads")
@@ -44,7 +43,6 @@
 (defsystem "chanl/tests"
   :name "chanl tests"
   :maintainer "Adlai Chandrasekhar"
-  :author "Kat Marchan"
   :description "Unit Tests for the ChanL library and its examples"
   :depends-on ("chanl" "fiveam")
   :serial t
