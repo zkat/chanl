@@ -44,9 +44,10 @@
           (car vals-tail) next-val       ; Must... resist... the urge...
           (cdr vals-tail) (car alist)))) ; Gaaaah!
 
-(defmacro fun (&body body)
-  "This macro puts the FUN back in FUNCTION."
-  `(lambda (&optional _) (declare (ignorable _)) ,@body))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defmacro fun (&body body)
+    "This macro puts the FUN back in FUNCTION."
+    `(lambda (&optional _) (declare (ignorable _)) ,@body)))
 
 (defmacro econd (&body cond-clauses &aux error)
   "Like `ecase', but for `cond'. An optional initial string is used as the error message."
@@ -55,9 +56,10 @@
   `(cond ,@cond-clauses
          (t (error ,(or error "None of the ECOND clauses matched.")))))
 
-(defmacro with-gensyms (names &body body)
-  `(let ,(mapcar (fun `(,_ (gensym ,(string _)))) names)
-     ,@body))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defmacro with-gensyms (names &body body)
+    `(let ,(mapcar (fun `(,_ (gensym ,(string _)))) names)
+       ,@body)))
 
 (defmacro pop-declarations (place)
   "Returns and removes all leading declarations from PLACE, which should be
