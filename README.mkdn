@@ -33,7 +33,7 @@ The included examples can be loaded by doing
 at the REPL after the main .asd has been loaded.
 
 
-Compatibility [![Build Status](https://travis-ci.org/zkat/chanl.svg)](https://travis-ci.org/zkat/chanl)
+Compatibility [![Build Status](https://travis-ci.com/adlai/chanl.svg)](https://travis-ci.com/adlai/chanl)
 -------------
 
 ChanL uses a subset of Bordeaux-threads for all its operations. All other code is written in ANSI
