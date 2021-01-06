@@ -1,4 +1,3 @@
-* DONE Make 300th commit
 * TODO Spec actors.lisp, as necessary for scalpl
 ** Background
 See https://github.com/adlai/scalpl/blob/a8abce4/actor.lisp for singular PoC,
