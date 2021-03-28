@@ -36,7 +36,6 @@
             :components ((:file "package")
                          (:file "utils")
                          (:file "actors")
-                         (:file "actors-tests")
                          (:file "conditions")
                          (:file "sieve")
                          (:file "futures")))))
@@ -45,7 +44,7 @@
   :name "chanl tests"
   :maintainer "Adlai Chandrasekhar"
   :description "Unit Tests for the ChanL library and its examples"
-  :depends-on ("chanl" "fiveam")
+  :depends-on ("chanl/examples" "fiveam")
   :serial t
   :components
   ((:module "tests"
@@ -53,7 +52,8 @@
             :components ((:file "setup-tests")
                          (:file "queues")
                          (:file "channels")
-                         (:file "select"))))
+                         (:file "select")
+                         (:file "actors"))))
   :perform
   (test-op (o c)
     (format t "~2&*******************~@
