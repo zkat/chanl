@@ -42,6 +42,10 @@
 (defun pooled-tasks ()
   (pool-tasks *thread-pool*))
 
+(defun pool-health ()
+  (reduce 'mapcar '(length funcall) :from-end t :initial-value
+          '(pooled-tasks pooled-threads all-threads)))
+
 (defun new-worker-thread (thread-pool &optional task)
   (push (bt:make-thread
          (lambda ()

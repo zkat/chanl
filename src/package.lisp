@@ -16,7 +16,7 @@
    #:pcall #:pexec #:*default-special-bindings*
    #:%thread-pool-soft-limit
    ;; tasks
-   #:task #:pooled-tasks
+   #:task #:pooled-tasks #:pool-health
    #:task-name #:task-status #:task-thread
    ;;; Channels
    ;; classes
