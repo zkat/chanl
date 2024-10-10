@@ -35,6 +35,8 @@
             :serial t
             :components ((:file "package")
                          (:file "utils")
+;(cerror "READ THE CODE")(:file "actors")
+; (cerror "FIXME")       (:file "actors-tests")
                          (:file "conditions")
                          (:file "sieve")
                          (:file "futures")))))
