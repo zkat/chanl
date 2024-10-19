@@ -10,9 +10,13 @@
 (in-package :chanl)
 
 ;;;
-;;; Thread pool
+;;; Thread pools
 ;;;
 (defclass thread-pool ()
+  ((threads :accessor pool-threads :initform nil)
+   (tasks :accessor pool-tasks :initform nil)))
+
+(defclass soft-thread-pool (thread-pool)
   ((threads :accessor pool-threads :initform nil)
    (free-thread-counter :accessor free-thread-counter :initform 0)
    (soft-limit :accessor pool-soft-limit :initform 1000) ; this seems like a sane-ish default
@@ -32,7 +36,7 @@
 (define-print-object ((task task))
   (format t "~A [~A]" (task-name task) (task-status task)))
 
-(defvar *thread-pool* (make-instance 'thread-pool))
+(defvar *thread-pool* (make-instance 'soft-thread-pool))
 
 (define-symbol-macro %thread-pool-soft-limit (pool-soft-limit *thread-pool*))
 
@@ -42,7 +46,7 @@
 (defun pooled-tasks ()
   (pool-tasks *thread-pool*))
 
-(defun pool-health ()
+(defun pool-health (&optional (*thread-pool* *thread-pool*))
   (reduce 'mapcar '(length funcall) :from-end t :initial-value
           '(pooled-tasks pooled-threads all-threads)))
 
@@ -78,11 +82,20 @@
              (bt:with-lock-held ((pool-lock thread-pool))
                (setf (pool-threads thread-pool)
                      (remove (bt:current-thread) (pool-threads thread-pool))))))
-         :name "ChanL Thread Pool Worker")
+         :name "ChanL Thread Pool Worker [soft]")
         (pool-threads thread-pool)))
 
 (defgeneric assign-task (thread-pool task)
-  (:method ((thread-pool thread-pool) (task task))
+  (:method ((thread-pool thread-pool)      (task task))
+    (cerror "Do it in the suit"
+            "~A is not an implemented subclass of DIAPER"
+            (class-of thread-pool))
+    (unwind-protect (progn
+                      (setf (task-thread task) (current-thread)
+                            (task-status task) :alive)
+                      (funcall (task-function task)))
+      (setf (task-thread task) () (task-status task) :terminated)))
+  (:method ((thread-pool soft-thread-pool) (task task))
     (bt:with-lock-held ((pool-lock thread-pool))
       (push task (pool-tasks thread-pool))
       (if (= (free-thread-counter thread-pool) (length (pool-pending-tasks thread-pool)))
