@@ -1,15 +1,17 @@
 What is ChanL?
 --------------
 
-"Wh-what you have to understand is that-that ChanL is not a big blob of state. When you have a lot
-of global state with lots of threads, you need to, you need to lock it down. It's like a truck, and
-if too many people try to use that truck, you, you get problems.  ChanL is not a big truck. It's a
-series--it's a series of *tubes*."
+"Wh-what you have to understand is that-that ChanL is not a big blob
+of state. When you have a lot of global state with lots of threads,
+you need to, you need to lock it down. It's like a truck, and if too
+many people try to use that truck, you, you get problems.  ChanL is
+not a big truck. It's a series--it's a series of *tubes*."
 
   - Sen. Ted Stevens
 
-In a nutshell, you create various threads sequentially executing tasks you need done, and use
-channel objects to communicate and synchronize the state of these threads.
+In a nutshell, you create various threads sequentially executing tasks
+you need done, and use channel objects to communicate and synchronize
+the state of these threads.
 
 You can read more about what that means here:
 
@@ -21,14 +23,14 @@ You can read more about what that means here:
 Loading ChanL
 -------------
 
-ChanL uses asdf for compiling/loading, so in order to load it, you must first make chanl.asd visible
-to your lisp, then simply
+ChanL uses asdf for compiling/loading, so in order to load it, you
+must first make chanl.asd visible to your lisp, then simply
 
-       (asdf:oos 'asdf:load-op 'chanl)
+       (asdf:load-system 'chanl)
 
 The included examples can be loaded by doing
 
-       (asdf:oos 'asdf:load-op 'chanl.examples)
+       (asdf:load-system 'chanl.examples)
 
 at the REPL after the main .asd has been loaded.
 
@@ -36,16 +38,21 @@ at the REPL after the main .asd has been loaded.
 Compatibility
 -------------
 
-ChanL uses a subset of Bordeaux-threads for all its operations. All other code is written in ANSI
-CL, so any lisp with a BT-compatible thread library should be able to use this library.
+ChanL uses a subset of Bordeaux-threads for all its operations. All
+other code is written in ANSI CL, so any lisp with a BT-compatible
+thread library _should_ be able to use this library; however, due to
+inconsistencies, ChanL is likely to fail on compilers that have not
+been updated recently, so **please report portability problems!**.
 
-ChanL is mainly developed on Clozure CL and SBCL, although it's been casually tested on other lisps.
+ChanL is mainly developed on Clozure CL and SBCL, although it's been
+casually tested on other lisps.
 
 You can run the test suite to see how well it works on yours:
 
-       (asdf:oos 'asdf:test-op 'chanl)
+       (asdf:test-system 'chanl)
 
-Note that the test-suite depends on 5AM, which can be found at http://github.com/sionescu/fiveam
+Note that the test-suite depends on 5AM, which can be found at
+http://github.com/sionescu/fiveam
 
 
 Channel API
@@ -65,11 +72,13 @@ Channel API
 
 *[method]* `make-instance (class bounded-channel) &key (size 1) &rest initargs`
 
-  Creates a new buffered channel object with a limited buffer size. The buffer has a maximum size of
-  SIZE. Bounded channel buffers are FIFO. When the buffer is full, SEND will block until something
+  Creates a new buffered channel object with a limited buffer
+  size. The buffer has a maximum size of SIZE. Bounded channel buffers
+  are FIFO. When the buffer is full, SEND will block until something
   is RECVd from the channel.
 
-  SIZE must be positive and less than +maximum-buffer-size+, and defaults to 1.
+  SIZE must be positive and less than +maximum-buffer-size+, and
+  defaults to 1.
 
 
 *[method]* `make-instance (class stack-channel) &rest initargs`
@@ -79,8 +88,9 @@ Channel API
 
 *[constant]* `+maximum-buffer-size+`
 
-  This constant has an implementation-dependant value, fixed when ChanL is loaded. It is the
-  exclusive upper bound to the size of a bounded-channel's buffer.
+  This constant has an implementation-dependant value, fixed when
+  ChanL is loaded. It is the exclusive upper bound to the size of a
+  bounded-channel's buffer.
 
   Note that this value might be further limited by memory constraints.
 
@@ -89,10 +99,11 @@ Channel API
 
 *[method]* `send (channel channel) value &key (blockp t)`
 
-  Tries to send VALUE into CHANNEL. If the channel is unbufferd or buffered but full, this operation
-  will block until RECV is called on the channel. Returns the channel that the value was sent into.
-  If blockp is NIL, NIL is returned immediately instead of a channel if attempting to send would
-  block.
+  Tries to send VALUE into CHANNEL. If the channel is unbufferd or
+  buffered but full, this operation will block until RECV is called on
+  the channel. Returns the channel that the value was sent into.  If
+  blockp is NIL, NIL is returned immediately instead of a channel if
+  attempting to send would block.
 
 
 *[method]* `send (channels sequence) value &key (blockp t)`
@@ -107,18 +118,22 @@ Channel API
 
 *[method]* `recv (channel channel) &key (blockp t)`
 
-  Tries to receive a value from CHANNEL. If the channel is unbuffered, or buffered but empty, this
-  operation will block until SEND is called on the channel. Returns two values: 1. The value
-  received through the channel, and 2. The channel the value was sent into. If BLOCKP is nil, this
-  operation will not block, and will return `(values NIL NIL)` if attempting it would block.
+  Tries to receive a value from CHANNEL. If the channel is unbuffered,
+  or buffered but empty, this operation will block until SEND is
+  called on the channel. Returns two values: 1. The value received
+  through the channel, and 2. The channel the value was sent into. If
+  BLOCKP is nil, this operation will not block, and will return
+  `(values NIL NIL)` if attempting it would block.
 
 
 *[method]* `recv (channel sequence) &key (blockp t)`
 
-  RECV may be used on a sequence of channels. RECV will linearly attempt to receive a value from
-  one of the channels in teh sequence. It will return immediately as soon as one channel has a value
-  available. As with the method for CHANNEL, this will return the value received, as well as the
-  channel the value was received from. If BLOCKP is NIL, and operating on all channels in sequence
+  RECV may be used on a sequence of channels. RECV will linearly
+  attempt to receive a value from one of the channels in teh
+  sequence. It will return immediately as soon as one channel has a
+  value available. As with the method for CHANNEL, this will return
+  the value received, as well as the channel the value was received
+  from. If BLOCKP is NIL, and operating on all channels in sequence
   would block, `(values NIL NIL)` is returned instead of blocking.
 
 
@@ -132,28 +147,36 @@ Channel API
      op ::=   (recv c &optional variable channel-var)
             | (send c value &optional channel-var)
             | else | otherwise | t
-     c ::= an evaluated form representing a channel, or a sequence of channels.
-     variable ::= an unevaluated symbol, bound within form* to RECV's return value.
-     value ::= an evaluated form returning a value to send into the channel.
-     channel-var ::= An unevaluated symbol that will be bound to the channel the SEND/RECV
-                     operation succeeded on.
-     result(s) ::= the values returned by the last form in the selected clause.
 
-  SELECT will first attempt to find a clause with a non-blocking op, and execute it.
-  Selecting a clause to execute is atomic, but execution of the clause's body after
-  the SEND/RECV clause executes is NOT atomic.  If all channel clauses would block,
-  and no else clause is provided, SELECT will thrash-idle (an undesirable state!)
+     c ::= an evaluated form representing either one single channel,
+     or a sequence containing multiple ordered channels.
+
+     variable ::= a symbol, bound within form* to RECV's return value.
+
+     value ::= an form evaluated for the value to send to the channel.
+
+     channel-var ::= A symbol bound to the active SEND/RECV channel.
+
+     result(s) ::= the values returned by first clause to act up.
+
+  SELECT will first attempt to find a clause with a non-blocking op,
+  and execute it.  Selecting a clause to execute is atomic, but
+  execution of the clause's body after the SEND/RECV clause executes
+  is NOT atomic.  If all channel clauses would block, and no else
+  clause is provided, SELECT will thrash-idle (an undesirable state!)
   until one of the clauses is available for execution.
 
-  SELECT's non-determinism is, in fact, very non-deterministic. Clauses are chosen at
-  random, not in the order they are written. It's worth noting that SEND/RECV, when
-  used on sequences of channels, are still linear in the way they go through the
-  sequence -- the random selection is reserved for individual SELECT clauses.
+    SELECT's non-determinism is, in fact, very non-deterministic.
+  Clauses are chosen at random, not in the order they are written.
+  It's worth noting that SEND/RECV, when used on sequences, are still
+  linear in the way they go through the sequence -- the random
+  selection is reserved for individual SELECT clauses.
 
-  Please note that currently, the form for the channel in the RECV and SEND clauses
-  and for the value in the SEND clause might be evaluated multiple times in an
-  unspecified order. It is thus undesirable to place forms with side-effects in
-  these places. This is a bug and will be fixed in a future version of ChanL.
+    Please note that currently, the form for the channel in the RECV
+  and SEND clauses and for the value in the SEND clause might be
+  evaluated multiple times in an unspecified order. It is thus
+  undesirable to place forms with side-effects in these places. This
+  is a bug and will be fixed in a future version of ChanL.
 
 
 Thread API
@@ -161,44 +184,53 @@ Thread API
 
 *[special variable]* `*default-special-bindings*`
 
-  An alist of bindings new threads should have. The format is: '((*var1* 'value) (*var2* 'value2)).
+  alist of bindings new threads should have; its template is:
+  '((*var1* 'value) (*var2* 'value2)).
 
 
 *[function]* `pcall function &key initial-bindings name`
 
-  PCALL, a mnemonic for Parallel Call, calls FUNCTION in a new thread. FUNCTION must be a function
-  of zero arguments.  INITIAL-BINDINGS, if provided, should be an alist with the same format as
-  *default-special-bindings* representing dynamic variable bindings that FUNCTION is to be executed
-  with. The default value for INITIAL-BINDINGS is *DEFAULT-SPECIAL-BINDINGS*.
+    PCALL (mnemonic Parallel Call) calls FUNCTION in some thread.
+  FUNCTION must be a function of zero arguments.  INITIAL-BINDINGS, if
+  provided, are bound around the execution, and should follow the same
+  template as *default-special-bindings*, also the defaults if no
+  keyword argument is given.
 
-  PCALL returns a task object representing this task.  This object is intended for interactive use
-  (ie for debugging), and contains a bit of metadata about the execution.  The NAME argument can be
-  used to initialize the name slot of the task object.
+    PCALL returns a task object representing this task.  This object is
+  intended for interactive use in reflection and debugging, and
+  contains some of metadata about the execution.  The NAME argument
+  can be used to initialize the name slot of the task object.
 
 
 *[macro]* `pexec (&key (initial-bindings *default-special-bindings*)) &body body`
 
-  Executes BODY in parallel. INITIAL-BINDINGS, if provided, should be an alist representing dynamic
-  variable bindings that BODY is to be executed with, as if with *default-special-bindings*. NAME
-  can be used to initialize the name slot of the returned task object. PEXEC also returns a task.
+  Executes BODY in parallel. INITIAL-BINDINGS, if provided, should be
+  an alist representing dynamic variable bindings that BODY is to be
+  executed with, as if with *default-special-bindings*. NAME can be
+  used to initialize the name slot of the returned task object. PEXEC
+  also returns a task.
 
 
 Thread Introspection
 --------------------
 
-ChanL includes portable support for lisp threads through bordeaux-threads, and adds some sugar on
-top, such as a built-in thread pool. None of the thread functions here should be used in user code,
-since they are meant exclusively for development purposes. Most thread-related matters are
-automatically handled by the thread pool already. In fact, not a single one of these should be
-expected to work properly when you use them, so do so at your own risk.
+  ChanL includes portable support for lisp threads through
+bordeaux-threads, and adds some sugar on top, such as a built-in
+thread pool. None of the thread functions here should be used in user
+code, since they are meant exclusively for development purposes. Most
+thread-related matters are automatically handled by the thread pool
+already. In fact, not a single one of these should be expected to work
+properly when you use them, so do so at your own risk.
 
 
 *[class]* `task`
 
-  Tasks represent the bits of work carried out by threads.  Task objects should be treated as read-
-  only debugging aids.  The functions TASK-NAME, TASK-THREAD, and TASK-STATUS return metadata about
-  the task.  Since this is an experimental feature, its API is likely to change -- the current
-  behavior can be checked in src/threads.lisp.
+    Tasks represent the bits of work carried out by threads.  Task
+  objects should be treated as read- only debugging aids.  The
+  functions TASK-NAME, TASK-THREAD, and TASK-STATUS return metadata
+  about the task.  Since this is an experimental feature, its API is
+  likely to change -- the current behavior can be checked in
+  src/threads.lisp.
 
 
 *[function]* `current-thread`
@@ -243,10 +275,12 @@ expected to work properly when you use them, so do so at your own risk.
 
 *[symbol-macro]* `%thread-pool-soft-limit`
 
-  This is a SETFable place. It may be used to inspect and change the soft limit for how many threads
-  the thread pool keeps around. Note that the total number of threads will exceed this limit if
-  threads continue to be spawned while others are still running. This only refers to the number of
-  threads kept alive for later use.  The default value is 1000.
+  This is a SETFable place. It may be used to inspect and change the
+  soft limit for how many threads the thread pool keeps around. Note
+  that the total number of threads will exceed this limit if threads
+  continue to be spawned while others are still running. This only
+  refers to the number of threads kept alive for later use.  The
+  default value is 1000.
 
 
 Writing your own channels
@@ -256,26 +290,30 @@ Currently, ChanL provides a very early API for writing your own channels easily.
 
 *[class]* `abstract-channel`
 
-  This class is the ancestral superclass of all channels. CHANNELP returns T for any instances of
-  this class or its subclasses.
+  This class is the ancestral superclass of all channels. CHANNELP
+  returns T for any instances of this class or its subclasses.
 
-  Direct subclasses of abstract-channel will have to define their own SEND/RECV methods, which
-  should meet the API requirements in order to be compatible with ChanL.
+  Direct subclasses of abstract-channel will have to define their own
+  SEND/RECV methods, which should meet the API requirements in order
+  to be compatible with ChanL.
 
 
 *[class]* `channel`
 
-  This is the main unbuffered class used in ChanL. Unless you wish to write a new synchronization
-  algorithm for your custom channels, you should subclass CHANNEL, since you then get to reuse
-  ChanL's build-in algorithm (which relies on locks and condition variables).
+    This is the main unbuffered class used in ChanL. Unless you wish to
+  write a new synchronization algorithm for your custom channels, you
+  should subclass CHANNEL, since you then get to reuse ChanL's
+  build-in algorithm (which relies on locks and condition variables).
 
 
-Subclasses of the CHANNEL class are able to extend behavior in a fairly flexible way by simply
-writing methods for the following 4 generic functions:
+    Subclasses of the CHANNEL class are able to extend behavior in a
+  fairly flexible way by simply writing methods for the following 4
+  generic functions:
 
 *[generic function]* `send-blocks-p channel`
 
-  This function returns, as a generalized boolean, whether SEND should block on this channel.
+    This function returns, as a generalized boolean, whether SEND
+  should block on this channel.
 
 
 *[generic function]* `recv-blocks-p channel`
@@ -283,25 +321,29 @@ writing methods for the following 4 generic functions:
   Like send-blocks-p, but for RECV.
 
 
-Please note that the consequences of calling send-blocks-p and recv-blocks-p in user code are
-*undefined* -- these functions are called from specific points within the carefully instrumented
-algorithms of the SEND and RECV methods specialized on the CHANNEL class.
+    Please note that the consequences of calling send-blocks-p and
+  recv-blocks-p in user code are *undefined* -- these functions are
+  called from specific points within the carefully instrumented
+  algorithms of the SEND and RECV methods specialized on the CHANNEL
+  class.
 
 
 *[generic function]* `channel-insert-value channel value`
 
-  Methods on this function define what actions are taken to insert a value into a channel. Methods
-  should be specialized only on the first argument. This function's return values are ignored.
+    Methods on this function define what actions are taken to insert a
+  value into a channel. Methods should be specialized only on the
+  first argument. This function's return values are ignored.
 
 
 *[generic function]* `channel-grab-value channel`
 
-  Methods on this function define how to retrieve a value from a channel. This function must return
-  at least one value, the object retrieved from the channel, which will then be returned by RECV.
+    Methods on this function define how to retrieve a value from a
+  channel. This function must return at least one value, the object
+  retrieved from the channel, which will then be returned by RECV.
 
 
-Additionally, ChanL uses and exports a number of abstract and concrete classes to implement its
-buffered channels:
+    Additionally, ChanL uses and exports a number of abstract and
+  concrete classes to implement its buffered channels:
 
 
 *[abstract class]* `buffered-channel`
@@ -316,18 +358,20 @@ buffered channels:
 
 *[class]* `bounded-channel`
 
-  Class used by ChanL's bounded channels (queue channels that block when the queue reaches a certain
-  length).
+  Class used by ChanL's bounded channels (queue channels that block
+  when the queue reaches a certain length).
 
 
 *[class]* `unbounded-channel`
 
-  Class used by ChanL's unbounded channels, which are queues of unlimited length (SEND never blocks)
+  Class used by ChanL's unbounded channels, which are queues of
+  unlimited length (SEND never blocks)
 
 
 *[class]* `stack-channel`
 
-  Class used by ChanL's stack channels. These channels' buffers are unbounded LIFO stack structures.
+  Class used by ChanL's stack channels. These channels' buffers are
+  unbounded LIFO stack structures.
 
 
 Examples
@@ -337,8 +381,9 @@ Create a channel:
 
      (defvar *c* (make-instance 'channel))
 
-Create a buffered channel with a buffer size of 5. Buffered channels do not block on send until
-their buffer is full, or on recv until their buffer is empty.
+Create a buffered channel with a buffer size of 5. Buffered channels
+do not block on send until their buffer is full, or on recv until
+their buffer is empty.
 
      (defvar *c* (make-instance 'bounded-channel :size 5))
 
@@ -346,7 +391,8 @@ Read a value from a channel (blocks if channel is empty)
 
      (recv *c*)
 
-Write a value to a channel (blocks if channel is full, always blocks on unbuffered channels)
+Write a value to a channel (blocks if channel is full, always blocks
+on unbuffered channels)
 
      (send *c* 99)
 
@@ -371,5 +417,6 @@ Create a new thread that runs a function:
 
      (pcall #'my-function)
 
-Please refer to the examples/ directory for examples of how ChanL can be used, including a parallel
-prime sieve algorithm translated from Newsqueak and an implementation of future-based concurrency.
+  Please refer to the examples/ directory for examples of how ChanL
+can be used, including a parallel prime sieve algorithm translated
+from Newsqueak and an implementation of future-based concurrency.
