@@ -48,48 +48,54 @@
 
 (defun pool-health (&optional (thread-pool *thread-pool*))
   (with-slots (tasks threads) thread-pool
-    (list (length tasks) (length threads) 
+    (list (length tasks) (length threads)
           (length (bt:all-threads)))))
 
-(defun new-worker-thread (thread-pool &optional task)
-  (push (bt:make-thread
-         (lambda ()
-           (unwind-protect
-                (loop
-                   (when task
-                     (unwind-protect
-                          (progn (setf (task-thread task) (current-thread))
-                                 (setf (task-status task) :alive)
-                                 (funcall (task-function task)))
-                       (setf (task-thread task) nil)
-                       (setf (task-status task) :terminated)
-                       (bt:with-lock-held ((pool-lock thread-pool))
-                         (setf (pool-tasks thread-pool)
-                               (remove task (pool-tasks thread-pool))))))
-                   (bt:with-lock-held ((pool-lock thread-pool))
-                     (if (and (pool-soft-limit thread-pool)
-                              (> (length (pool-threads thread-pool))
-                                 (pool-soft-limit thread-pool)))
-                         (return)
-                         (incf (free-thread-counter thread-pool))))
-                   (bt:with-lock-held ((pool-leader-lock thread-pool))
-                     (bt:with-lock-held ((pool-lock thread-pool))
-                       (setf task
-                             (loop until (pool-pending-tasks thread-pool)
-                                do (bt:condition-wait (pool-leader-notifier thread-pool)
-                                                      (pool-lock thread-pool))
-                                finally (return (pop (pool-pending-tasks thread-pool)))))
-                       (decf (free-thread-counter thread-pool)))))
+(defvar *thread-pool-timeout* nil
+  "When non-NIL, this timeout helps avoid deadlocks in the thread pool.")
+
+(defun worker-function (thread-pool &optional task)
+  (lambda ()
+    (unwind-protect
+         (loop
+           (when task
+             (unwind-protect
+                  (progn (setf (task-thread task) (current-thread))
+                         (setf (task-status task) :alive)
+                         (funcall (task-function task)))
+               (setf (task-thread task) nil)
+               (setf (task-status task) :terminated)
+               (bt:with-lock-held ((pool-lock thread-pool))
+                 (setf (pool-tasks thread-pool)
+                       (remove task (pool-tasks thread-pool))))))
+           (bt:with-lock-held ((pool-lock thread-pool))
+             (if (and (pool-soft-limit thread-pool)
+                      (> (length (pool-threads thread-pool))
+                         (pool-soft-limit thread-pool)))
+                 (return)
+                 (incf (free-thread-counter thread-pool))))
+           (bt:with-lock-held ((pool-leader-lock thread-pool))
              (bt:with-lock-held ((pool-lock thread-pool))
-               (setf (pool-threads thread-pool)
-                     (remove (bt:current-thread) (pool-threads thread-pool))))))
-         :name "ChanL Thread Pool Worker [soft]")
+               (setf task
+                     (do () ((pool-pending-tasks thread-pool)
+                             (pop (pool-pending-tasks thread-pool)))
+                       (bt:condition-wait (pool-leader-notifier thread-pool)
+                                          (pool-lock thread-pool)
+                                          :timeout *thread-pool-timeout*)))
+               (decf (free-thread-counter thread-pool)))))
+      (bt:with-lock-held ((pool-lock thread-pool))
+        (setf (pool-threads thread-pool)
+              (remove (bt:current-thread) (pool-threads thread-pool)))))))
+
+(defun new-worker-thread (thread-pool &optional task)
+  (push (bt:make-thread (worker-function thread-pool task)
+                        :name "ChanL Soft Worker")
         (pool-threads thread-pool)))
 
 (defgeneric assign-task (thread-pool task)
   (:method ((thread-pool thread-pool)      (task task))
-    (cerror "Do it in the suit"
-            "~A is not an implemented subclass of DIAPER"
+    (cerror "Run the task in the current thread"
+            "~A has no specialized pooling implementation"
             (class-of thread-pool))
     (unwind-protect (progn
                       (setf (task-thread task) (current-thread)
