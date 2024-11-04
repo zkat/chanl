@@ -98,7 +98,8 @@
   (:method ((thread-pool soft-thread-pool) (task task))
     (bt:with-lock-held ((pool-lock thread-pool))
       (push task (pool-tasks thread-pool))
-      (if (= (free-thread-counter thread-pool) (length (pool-pending-tasks thread-pool)))
+      (if (= (free-thread-counter thread-pool)
+             (length (pool-pending-tasks thread-pool)))
           (new-worker-thread thread-pool task)
           (setf (pool-pending-tasks thread-pool)
                 (nconc (pool-pending-tasks thread-pool) (list task)))))
@@ -108,8 +109,8 @@
 ;;;
 ;;; Threads
 ;;;
-;;; - The reason we're basically just wrapping BT functions with the same names is that it might
-;;;   be good to eventually get rid of the BT dependency.
+;;; - The goal of just wrapping BT functions with the same
+;;;    names is to eventually get rid of the BT dependency.
 (defun current-thread ()
   (bt:current-thread))
 
@@ -128,20 +129,21 @@
 (defun all-threads ()
   (bt:all-threads))
 
-(defun pcall (function &key (initial-bindings *default-special-bindings*) (name "Anonymous task"))
-  "PCALL -> Parallel Call; calls FUNCTION in a new thread. FUNCTION must be a no-argument function.
-INITIAL-BINDINGS, if provided, should be an alist representing dynamic variable bindings that BODY
-is to be executed with. The format is: '((*var* value))."
+(defun pcall (function &key (name "Anonymous task")
+                         (initial-bindings *default-special-bindings*))
+  "PCALL -> Parallel Call; calls `FUNCTION' in a new thread.
+`FUNCTION' must not require any arguments; `INITIAL-BINDINGS'
+sets dynamic variable bindings around `BODY' using the same
+format as `PROGV': '((*var* value))."
   (assign-task *thread-pool*
-               (make-instance 'task :name name
-                              :function (fun (multiple-value-bind (vars bindings)
-                                                 (unzip-alist initial-bindings)
-                                               (progv vars bindings
-                                                 (funcall function)))))))
+               (make-instance 'task :name name :function
+                              (fun (multiple-value-bind (vars bindings)
+                                       (unzip-alist initial-bindings)
+                                     (progv vars bindings
+                                       (funcall function)))))))
 
 (defmacro pexec ((&key initial-bindings name) &body body)
-  "Executes BODY in parallel. INITIAL-BINDINGS, if provided, should be an alist representing
-dynamic variable bindings that BODY is to be executed with. The format is: '((*var* value))."
+  "Executes `BODY' in parallel; syntax sugar around `PCALL'."
   `(pcall (lambda () ,@body)
           ,@(when initial-bindings `(:initial-bindings ,initial-bindings))
           ,@(when name `(:name ,name))))
