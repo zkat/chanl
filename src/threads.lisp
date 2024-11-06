@@ -23,6 +23,7 @@
    (lock :reader pool-lock :initform (bt:make-lock "thread pool lock"))
    (leader-lock :reader pool-leader-lock :initform (bt:make-lock "thread leader lock"))
    (leader-notifier :reader pool-leader-notifier :initform (bt:make-condition-variable))
+   (timeout :accessor pool-timeout :initform nil)
    (pending-tasks :accessor pool-pending-tasks :initform nil)
    (tasks :accessor pool-tasks :initform nil)))
 
@@ -51,39 +52,33 @@
     (list (length tasks) (length threads)
           (length (bt:all-threads)))))
 
-(defvar *thread-pool-timeout* nil
-  "When non-NIL, this timeout helps avoid deadlocks in the thread pool.")
-
-(defun worker-function (thread-pool &optional task)
-  (lambda ()
-    (unwind-protect
-         (loop
-           (when task
-             (with-slots (thread status function) task
-               (unwind-protect
-                    (progn (setf thread (current-thread) status :alive)
-                           (funcall (task-function task)))
-                 (setf thread nil status :terminated)
-                 (bt:with-lock-held ((pool-lock thread-pool))
-                   (setf (pool-tasks thread-pool)
-                         (remove task (pool-tasks thread-pool)))))))
-           (bt:with-lock-held ((pool-lock thread-pool))
-             (if (and (pool-soft-limit thread-pool)
-                      (> (length (pool-threads thread-pool))
-                         (pool-soft-limit thread-pool)))
-                 (return)
-                 (incf (free-thread-counter thread-pool))))
-           (with-simple-restart (continue "Release leader lock and requeue")
-             (bt:with-lock-held ((pool-leader-lock thread-pool))
-               (bt:with-lock-held ((pool-lock thread-pool))
-                 (do () ((pool-pending-tasks thread-pool)
-                         (setf task (pop (pool-pending-tasks thread-pool))))
-                   (bt:condition-wait (pool-leader-notifier thread-pool)
-                                      (pool-lock thread-pool)))
-                 (decf (free-thread-counter thread-pool))))))
-      (bt:with-lock-held ((pool-lock thread-pool))
-        (setf (pool-threads thread-pool)
-              (remove (bt:current-thread) (pool-threads thread-pool)))))))
+(defmethod worker-function ((thread-pool soft-thread-pool) &optional task)
+  (with-slots (lock tasks threads soft-limit) thread-pool
+    (lambda ()
+      (unwind-protect
+           (loop
+             (when task
+               (with-slots (thread status function) task
+                 (unwind-protect
+                      (progn (setf thread (current-thread) status :alive)
+                             (funcall (task-function task)))
+                   (setf thread nil status :terminated)
+                   (bt:with-lock-held (lock)
+                     (setf tasks (remove task tasks))))))
+             (bt:with-lock-held (lock)
+               (if (and soft-limit (> (length threads) soft-limit)) (return)
+                   (incf (free-thread-counter thread-pool))))
+             (with-slots (pending-tasks leader-lock leader-notifier) thread-pool
+               (with-simple-restart
+                   (continue "Release leader lock and requeue")
+                 (bt:with-lock-held (leader-lock)
+                   (bt:with-lock-held (lock)
+                     (do () (pending-tasks (setf task (pop pending-tasks)))
+                       (bt:condition-wait leader-notifier lock
+                                          :timeout (pool-timeout thread-pool)))
+                     (decf (free-thread-counter thread-pool)))))))
+        (bt:with-lock-held (lock)
+          (setf threads (remove (bt:current-thread) threads)))))))
 
 (defun new-worker-thread (thread-pool &optional task)
   (push (bt:make-thread (worker-function thread-pool task)
