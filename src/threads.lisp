@@ -53,7 +53,7 @@
           (length (bt:all-threads)))))
 
 (defmethod worker-function ((thread-pool soft-thread-pool) &optional task)
-  (with-slots (lock tasks threads soft-limit) thread-pool
+  (with-slots (lock tasks threads soft-limit timeout) thread-pool
     (lambda ()
       (unwind-protect
            (loop
@@ -69,14 +69,16 @@
                (if (and soft-limit (> (length threads) soft-limit)) (return)
                    (incf (free-thread-counter thread-pool))))
              (with-slots (pending-tasks leader-lock leader-notifier) thread-pool
-               (with-simple-restart
-                   (continue "Release leader lock and requeue")
-                 (bt:with-lock-held (leader-lock)
-                   (bt:with-lock-held (lock)
-                     (do () (pending-tasks (setf task (pop pending-tasks)))
-                       (bt:condition-wait leader-notifier lock
-                                          :timeout (pool-timeout thread-pool)))
-                     (decf (free-thread-counter thread-pool)))))))
+               (handler-case
+                   (bt:with-lock-held (leader-lock)
+                     (bt:with-lock-held (lock)
+                       (do () (pending-tasks (setf task (pop pending-tasks)))
+                         (bt:condition-wait leader-notifier lock
+                                            :timeout timeout))
+                       (decf (free-thread-counter thread-pool))))
+                 #+sb-thread
+                 (sb-thread:thread-deadlock (deadlock)
+                   (format *debug-io* "~&~A~%Evaded successfully" deadlock)))))
         (bt:with-lock-held (lock)
           (setf threads (remove (bt:current-thread) threads)))))))
 
