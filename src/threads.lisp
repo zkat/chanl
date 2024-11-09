@@ -78,9 +78,8 @@
                        (decf (free-thread-counter thread-pool))))
                  #+sb-thread
                  (sb-thread:thread-deadlock (deadlock)
-                   (format *debug-io*
-                           "~&~A~&Deadlock evaded successfully!~%"
-                           (sb-thread:thread-deadlock deadlock))))))
+                   (format *debug-io* "~&~A~&Deadlock evaded successfully!~%"
+                           deadlock)))))
         (bt:with-lock-held (lock)
           (setf threads (remove (bt:current-thread) threads)))))))
 
