@@ -16,12 +16,15 @@
   ((threads :accessor pool-threads :initform nil)
    (tasks :accessor pool-tasks :initform nil)))
 
-(defclass old-thread-pool (thread-pool)
-  ((free-thread-counter :accessor free-thread-counter :initform 0)
-   (soft-limit :accessor pool-soft-limit :initform 1000) ; this seems like a sane-ish default
-   (lock :reader pool-lock :initform (bt:make-lock "thread pool lock"))
+(defclass leader-follower-pool (thread-pool)
+  ((lock :reader pool-lock :initform (bt:make-lock "thread pool lock"))
+   (leader-notifier :reader pool-leader-notifier :initform
+             (bt:make-condition-variable :name "pool leader notifier"))
+   (free-thread-counter :accessor free-thread-counter :initform 0)))
+
+(defclass old-thread-pool (leader-follower-pool)
+  ((soft-limit :accessor pool-soft-limit :initform 1000)
    (leader-lock :reader pool-leader-lock :initform (bt:make-lock "thread leader lock"))
-   (leader-notifier :reader pool-leader-notifier :initform (bt:make-condition-variable))
    (timeout :accessor pool-timeout :initform nil)
    (pending-tasks :accessor pool-pending-tasks :initform nil))
   (:documentation "Soft thread pool with two locks; deadlocks SBCL occasionally"))
