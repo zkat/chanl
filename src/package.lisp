@@ -14,7 +14,7 @@
    #:current-thread #:thread-alive-p #:threadp
    #:thread-name #:kill #:all-threads #:pooled-threads
    #:pcall #:pexec #:*default-special-bindings*
-   #:%thread-pool-soft-limit
+   #:%thread-pool-soft-limit #:pool-timeout
    ;; tasks
    #:task #:pooled-tasks #:pool-health
    #:task-name #:task-status #:task-thread

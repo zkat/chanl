@@ -16,16 +16,15 @@
   ((threads :accessor pool-threads :initform nil)
    (tasks :accessor pool-tasks :initform nil)))
 
-(defclass soft-thread-pool (thread-pool)
-  ((threads :accessor pool-threads :initform nil)
-   (free-thread-counter :accessor free-thread-counter :initform 0)
+(defclass old-thread-pool (thread-pool)
+  ((free-thread-counter :accessor free-thread-counter :initform 0)
    (soft-limit :accessor pool-soft-limit :initform 1000) ; this seems like a sane-ish default
    (lock :reader pool-lock :initform (bt:make-lock "thread pool lock"))
    (leader-lock :reader pool-leader-lock :initform (bt:make-lock "thread leader lock"))
    (leader-notifier :reader pool-leader-notifier :initform (bt:make-condition-variable))
    (timeout :accessor pool-timeout :initform nil)
-   (pending-tasks :accessor pool-pending-tasks :initform nil)
-   (tasks :accessor pool-tasks :initform nil)))
+   (pending-tasks :accessor pool-pending-tasks :initform nil))
+  (:documentation "Soft thread pool with two locks; deadlocks SBCL occasionally"))
 
 (defclass task ()
   ((name :accessor task-name :initform "Anonymous Task" :initarg :name)
@@ -37,7 +36,7 @@
 (define-print-object ((task task))
   (format t "~A [~A]" (task-name task) (task-status task)))
 
-(defvar *thread-pool* (make-instance 'soft-thread-pool))
+(defvar *thread-pool* (make-instance 'old-thread-pool))
 
 (define-symbol-macro %thread-pool-soft-limit (pool-soft-limit *thread-pool*))
 
@@ -52,7 +51,7 @@
     (list (length tasks) (length threads)
           (length (bt:all-threads)))))
 
-(defmethod worker-function ((thread-pool soft-thread-pool) &optional task)
+(defmethod worker-function ((thread-pool old-thread-pool) &optional task)
   (with-slots (lock tasks threads soft-limit timeout) thread-pool
     (lambda ()
       (unwind-protect
@@ -78,14 +77,14 @@
                        (decf (free-thread-counter thread-pool))))
                  #+sb-thread
                  (sb-thread:thread-deadlock (deadlock)
-                   (format *debug-io* "~&~A~&Deadlock evaded successfully!~%"
+                   (format *debug-io* "~&~A~&Deadlock evaded naively; pending tasks at risk~%"
                            deadlock)))))
         (bt:with-lock-held (lock)
           (setf threads (remove (bt:current-thread) threads)))))))
 
 (defun new-worker-thread (thread-pool &optional task)
   (push (bt:make-thread (worker-function thread-pool task)
-                        :name "ChanL Soft Worker")
+                        :name "ChanL Old Worker")
         (pool-threads thread-pool)))
 
 (defgeneric assign-task (thread-pool task)
@@ -98,7 +97,7 @@
                             (task-status task) :alive)
                       (funcall (task-function task)))
       (setf (task-thread task) () (task-status task) :terminated)))
-  (:method ((thread-pool soft-thread-pool) (task task))
+  (:method ((thread-pool old-thread-pool) (task task))
     (bt:with-lock-held ((pool-lock thread-pool))
       (push task (pool-tasks thread-pool))
       (if (= (free-thread-counter thread-pool)
