@@ -107,8 +107,8 @@
              (length (pool-pending-tasks thread-pool)))
           (new-worker-thread thread-pool task)
           (setf (pool-pending-tasks thread-pool)
-                (nconc (pool-pending-tasks thread-pool) (list task)))))
-    (bt:condition-notify (pool-leader-notifier thread-pool))
+                (nconc (pool-pending-tasks thread-pool) (list task))))
+      (bt:condition-notify (pool-leader-notifier thread-pool)))
     task))
 
 ;;;
