@@ -20,14 +20,17 @@
   ((lock :reader pool-lock :initform (bt:make-lock "thread pool lock"))
    (leader-notifier :reader pool-leader-notifier :initform
              (bt:make-condition-variable :name "pool leader notifier"))
+   (timeout :accessor pool-timeout :initform nil)
+   (pending-tasks :accessor pool-pending-tasks :initform nil)
    (free-thread-counter :accessor free-thread-counter :initform 0)))
 
 (defclass old-thread-pool (leader-follower-pool)
   ((soft-limit :accessor pool-soft-limit :initform 1000)
-   (leader-lock :reader pool-leader-lock :initform (bt:make-lock "thread leader lock"))
-   (timeout :accessor pool-timeout :initform nil)
-   (pending-tasks :accessor pool-pending-tasks :initform nil))
+   (leader-lock :reader pool-leader-lock :initform (bt:make-lock "thread leader lock")))
   (:documentation "Soft thread pool with two locks; deadlocks SBCL occasionally"))
+
+(defclass single-lock-pool (leader-follower-pool) ()
+  (:documentation "Simpler than `old-thread-pool'; should never deadlock"))
 
 (defclass task ()
   ((name :accessor task-name :initform "Anonymous Task" :initarg :name)
@@ -43,11 +46,9 @@
 
 (define-symbol-macro %thread-pool-soft-limit (pool-soft-limit *thread-pool*))
 
-(defun pooled-threads ()
-  (pool-threads *thread-pool*))
+(defun pooled-threads () (pool-threads *thread-pool*))
 
-(defun pooled-tasks ()
-  (pool-tasks *thread-pool*))
+(defun pooled-tasks () (pool-tasks *thread-pool*))
 
 (defun pool-health (&optional (thread-pool *thread-pool*))
   (with-slots (tasks threads) thread-pool
@@ -85,22 +86,44 @@
         (bt:with-lock-held (lock)
           (setf threads (remove (bt:current-thread) threads)))))))
 
+(defmethod worker-function ((thread-pool single-lock-pool) &optional task)
+  (with-slots (lock tasks threads timeout) thread-pool
+    (lambda ()
+      (unwind-protect
+           (loop
+             (when task
+               (with-slots (thread status function) task
+                 (unwind-protect
+                      (progn (setf thread (current-thread) status :alive)
+                             (funcall function))
+                   (setf thread nil status :terminated)
+                   (bt:with-lock-held (lock)
+                     (setf tasks (remove task tasks))))))
+             (bt:with-lock-held (lock)
+               (incf (free-thread-counter thread-pool))
+               (with-slots (pending-tasks leader-notifier) thread-pool
+                 (do () (pending-tasks (setf task (pop pending-tasks)))
+                   (bt:condition-wait leader-notifier lock :timeout timeout)))
+               (decf (free-thread-counter thread-pool))))
+        (bt:with-lock-held (lock)
+          (setf threads (remove (bt:current-thread) threads)))))))
+
 (defun new-worker-thread (thread-pool &optional task)
   (push (bt:make-thread (worker-function thread-pool task)
                         :name "ChanL Old Worker")
         (pool-threads thread-pool)))
 
 (defgeneric assign-task (thread-pool task)
-  (:method ((thread-pool thread-pool)      (task task))
+  (:method ((thread-pool thread-pool) (task task))
     (cerror "Run the task in the current thread"
             "~A has no specialized pooling implementation"
             (class-of thread-pool))
-    (unwind-protect (progn
-                      (setf (task-thread task) (current-thread)
-                            (task-status task) :alive)
-                      (funcall (task-function task)))
-      (setf (task-thread task) () (task-status task) :terminated)))
-  (:method ((thread-pool old-thread-pool) (task task))
+    (with-slots (thread status function) task
+      (unwind-protect (prog1 task
+                        (setf thread (current-thread) status :alive)
+                        (funcall function))
+        (setf thread () status :terminated))))
+  (:method ((thread-pool leader-follower-pool) (task task))
     (bt:with-lock-held ((pool-lock thread-pool))
       (push task (pool-tasks thread-pool))
       (if (= (free-thread-counter thread-pool)
