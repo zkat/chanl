@@ -32,14 +32,14 @@
   :serial t
   :components
   ((:module "examples"
-            :serial t
-            :components ((:file "package")
-                         (:file "utils")
-;(cerror "READ THE CODE")(:file "actors")
-; (cerror "FIXME")       (:file "actors-tests")
-                         (:file "conditions")
-                         (:file "sieve")
-                         (:file "futures")))))
+    :serial t
+    :components ((:file "package")
+                 (:file "utils")
+                 ;; (cerror "READ THE CODE")(:file "actors")
+                 ;; (cerror "FIXME")       (:file "actors-tests")
+                 (:file "conditions")
+                 (:file "sieve")
+                 (:file "futures")))))
 
 (defsystem "chanl/tests"
   :name "chanl tests"
@@ -49,11 +49,12 @@
   :serial t
   :components
   ((:module "tests"
-            :serial t
-            :components ((:file "setup-tests")
-                         (:file "queues")
-                         (:file "channels")
-                         (:file "select"))))
+    :serial t
+    :components ((:file "setup-tests")
+                 (:file "deadlock")
+                 (:file "queues")
+                 (:file "channels")
+                 (:file "select"))))
   :perform
   (test-op (o c)
     (format t "~2&*******************~@
