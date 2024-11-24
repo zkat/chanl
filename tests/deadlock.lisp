@@ -16,4 +16,10 @@
 
 (test stumblers
   (pexec (:name "stumbler @ 5 Hz") (stumbler))
-  (is (null (loop for i from 0 do (sleep 1) while (pooled-tasks)))))
+  (is (null (loop for i from 0 do (sleep 1) while (pooled-tasks))))
+  (when (yes-or-no-p "Stress deadlock detection further?")
+    (pexec (:name "stumbler @ 6 Hz") (stumbler 6))
+    (is (null (loop for i from 0 do (sleep 1) while (pooled-tasks)))))
+  ;; Please reconsider your personal tasking priorities before
+  ;; automating the above test until it produces real hard deadlocks.
+  )
