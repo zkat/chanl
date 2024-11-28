@@ -71,7 +71,7 @@ blocking (if it would block)"))
                 `(unwind-protect (progn (incf (,',place ,channel)) ,@body)
                    (decf (,',place ,channel))
                    (when (minusp (,',place ,channel))
-                     (error "Something bad happened with ~s" ',',place))))))
+                     (error "Racing inconsistency (among ~(~s~))" ',',place))))))
   (define-channel-state-macro with-write-state channel-writers)
   (define-channel-state-macro with-read-state channel-readers))
 
