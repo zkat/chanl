@@ -1,0 +1,9 @@
+QD> (setf (slot-value chanl::*thread-pool* 'chanl::pool-timeout) 13)
+; Evaluation aborted on #<SB-PCL::MISSING-SLOT POOL-TIMEOUT {1007179NUKE}>.
+QD> (handler-bind ((simple-error (condition) (describe condition)))
+      (setf (slot-value chanl::*thread-pool* 'chanl::pool-timeout) 13))
+; Evaluation aborted on #<SIMPLE-ERROR "ill-formed handler binding: ~S" {100807NUKE}>.
+QD> (handler-case (setf (slot-value chanl::*thread-pool* 'chanl::pool-timeout) 13)
+      (simple-error (condition) (describe condition)))
+("set the slot's value to 13 (SETF of SLOT-VALUE)" POOL-TIMEOUT
+ #<CHANL::OLD-THREAD-POOL {1001DDNUKE}> NIL)
