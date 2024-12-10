@@ -27,9 +27,11 @@
    (free-thread-counter :accessor free-thread-counter :initform 0)))
 
 (defclass old-thread-pool (leader-follower-pool)
-  ((soft-limit :accessor pool-soft-limit :initform 1000)
-   (leader-lock :reader pool-leader-lock :initform (bt:make-lock "thread leader lock")))
-  (:documentation "Soft thread pool with two locks; deadlocks SBCL occasionally"))
+  ((soft-limit :accessor pool-soft-limit
+               :initform 1000) ; FIXME HARD CODE DEAD GONE !!!
+   (leader-lock :reader pool-leader-lock
+                :initform (bt:make-lock "thread leader lock")))
+  (:documentation "Soft thread pool with two locks; SBCL warns about deadlock"))
 
 (defclass single-lock-pool (leader-follower-pool) ()
   (:documentation "Simpler than `old-thread-pool'; should never deadlock"))
