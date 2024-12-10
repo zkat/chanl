@@ -61,6 +61,7 @@
 
 (defmethod worker-function ((thread-pool old-thread-pool) &optional task)
   (with-slots (lock tasks threads soft-limit timeout) thread-pool
+    (when timeout (warn "SMOKE OF EXPERIMENTAL FEATURES BLAZING!")) ;)
     (lambda ()
       (unwind-protect
            (loop
