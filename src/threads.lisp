@@ -1,12 +1,14 @@
 ;;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Base: 10; indent-tabs-mode: nil -*-
 ;;;;
-;;;; Copyright © 2009 Kat Marchan, Adlai Chandrasekhar
+;;;; Copyright © 2024 Adlai Chandrasekhar
 ;;;;
 ;;;; Thread Abstraction
 ;;;;
-;;;; The thread pool here is taken directly from Eager Future. See COPYRIGHT for relevant info.
+;;;; This file originally lifted code from Eager-Future; the current code
+;;;; is still based on the same thread pool, although the implementations
+;;;; have diverged. See COPYRIGHT for the relevant legal statements.
 ;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :chanl)
 
 ;;;
@@ -81,7 +83,8 @@
                        (decf (free-thread-counter thread-pool))))
                  #+sb-thread
                  (sb-thread:thread-deadlock (deadlock)
-                   (format *debug-io* "~&~A~&Deadlock evaded naively; pending tasks at risk~%"
+                   (format *debug-io* "~&~A~&Deadlock evaded naively; ~
+                                            pending tasks at risk~%"
                            deadlock)))))
         (bt:with-lock-held (lock)
           (setf threads (remove (bt:current-thread) threads)))))))
