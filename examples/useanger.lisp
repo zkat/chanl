@@ -8,7 +8,7 @@
     (mapc 'kill (remove "ChanL" (all-threads) :test-not 'search :key 'thread-name))
     (mapc 'kill (mapcar 'task-thread (pooled-tasks)))
     (mapc 'kill (pooled-tasks))
-    (setf (slot-reduce *charioteer* gate cache) ()
+    (setf ;(slot-reduce *charioteer* gate cache) ()
           (slot-value chanl::*thread-pool* 'chanl::tasks) ()
           (slot-value chanl::*thread-pool* 'chanl::threads) ()
           (slot-value chanl::*thread-pool* 'chanl::pending-tasks) ()
