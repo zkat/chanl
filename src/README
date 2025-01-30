@@ -1,0 +1,4 @@
+;; (delete-duplicates
+;; 	 (mapcar 'task-name (pooled-tasks)) :test #'string=
+;; 	 :key (lambda (string &aux (space (position #\Space string)))
+;; 	        (subseq string 0 space)))
