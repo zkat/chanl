@@ -1,0 +1,9 @@
+chanl::*thread-pool* 'chanl::free-thread-counter) 0)))
+Evaluation took:
+  0.593 seconds of real time
+  0.006261 seconds of total run time (0.005566 user, 0.000695 system)
+  1.01% CPU
+  1,414,887,900 processor cycles
+  3 page faults
+  32,752 bytes consed
+
